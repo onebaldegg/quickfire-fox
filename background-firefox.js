@@ -21,10 +21,10 @@ browser.action.onClicked.addListener(async (tab) => {
       files: ['logo-data.js']
     });
     
-    console.log('Injecting bundled content script...');
+    console.log('Injecting iframe-based content script...');
     await browser.scripting.executeScript({
       target: { tabId: tab.id },
-      files: ['content-firefox-bundled.js']
+      files: ['content-firefox-iframe.js']
     });
     
     // Small delay to ensure content script is ready

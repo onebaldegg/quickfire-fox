@@ -63,40 +63,35 @@
       }
     }
 
-    // Load jsPDF by directly executing the library code in Firefox
-    async loadjsPDF() {
-        console.log('Firefox: Loading jsPDF directly...');
+    // Create iframe to load jsPDF (proven technique to bypass CSP)
+    createPDFIframe() {
+      return new Promise((resolve, reject) => {
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = 'display: none; width: 0; height: 0; border: none;';
+        iframe.src = browser.runtime.getURL('pdf-iframe.html');
         
-        try {
-            // Fetch the jsPDF library content
-            const response = await fetch(browser.runtime.getURL('jspdf.umd.min.js'));
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const scriptContent = await response.text();
-            console.log('Firefox: jsPDF content fetched, executing directly...');
-            
-            // Execute the library code directly in the window context
-            const script = document.createElement('script');
-            script.textContent = scriptContent;
-            (document.head || document.documentElement).appendChild(script);
-            
-            // Wait a moment for the library to initialize
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-            // Verify jsPDF is available
-            if (typeof window.jsPDF !== 'undefined') {
-                console.log('Firefox: jsPDF is now available on window object');
-                this.librariesLoaded = true;
-                return true;
-            } else {
-                throw new Error('jsPDF not available after direct execution');
-            }
-        } catch (error) {
-            console.error('Firefox: Failed to load jsPDF directly:', error);
-            throw error;
-        }
+        const messageHandler = (event) => {
+          if (event.data.action === 'iframeReady') {
+            window.removeEventListener('message', messageHandler);
+            resolve(iframe);
+          }
+        };
+        
+        window.addEventListener('message', messageHandler);
+        
+        iframe.onerror = () => {
+          window.removeEventListener('message', messageHandler);
+          reject(new Error('Failed to load PDF iframe'));
+        };
+        
+        document.body.appendChild(iframe);
+        
+        // Timeout after 10 seconds
+        setTimeout(() => {
+          window.removeEventListener('message', messageHandler);
+          reject(new Error('PDF iframe load timeout'));
+        }, 10000);
+      });
     }
 
     async waitForLibraries() {

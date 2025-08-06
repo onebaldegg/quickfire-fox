@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>jsPDF Loader</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <!-- Load jsPDF in iframe to bypass CSP -->
+    <script src="jspdf.umd.min.js"></script>
+    <script>
+        // Expose jsPDF to parent window
+        window.addEventListener('message', function(event) {
+            if (event.data.action === 'createPDF') {
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF('p', 'mm', 'a4');
+                    
+                    // Create PDF with provided data
+                    const { screenshot, note, url } = event.data.data;
+                    
+                    // Add screenshot
+                    const img = new Image();
+                    img.onload = function() {
+                        const imgWidth = 190;
+                        const imgHeight = (img.height * imgWidth) / img.width;
+                        
+                        doc.addImage(screenshot, 'PNG', 10, 10, imgWidth, imgHeight);
+                        
+                        // Add note if provided
+                        if (note && note.trim()) {
+                            doc.setFontSize(12);
+                            doc.text(`Note: ${note}`, 10, imgHeight + 25);
+                        }
+                        
+                        // Add URL
+                        doc.setFontSize(10);
+                        doc.text(`Source: ${url}`, 10, imgHeight + (note && note.trim() ? 35 : 25));
+                        
+                        // Generate PDF as arraybuffer
+                        const pdfOutput = doc.output('arraybuffer');
+                        const pdfArray = Array.from(new Uint8Array(pdfOutput));
+                        
+                        // Send back to parent
+                        event.source.postMessage({
+                            action: 'pdfCreated',
+                            success: true,
+                            pdfData: pdfArray,
+                            requestId: event.data.requestId
+                        }, '*');
+                    };
+                    
+                    img.onerror = function() {
+                        event.source.postMessage({
+                            action: 'pdfCreated',
+                            success: false,
+                            error: 'Failed to load image',
+                            requestId: event.data.requestId
+                        }, '*');
+                    };
+                    
+                    img.src = screenshot;
+                    
+                } catch (error) {
+                    event.source.postMessage({
+                        action: 'pdfCreated',
+                        success: false,
+                        error: error.message,
+                        requestId: event.data.requestId
+                    }, '*');
+                }
+            }
+        });
+        
+        // Notify parent that iframe is ready
+        window.parent.postMessage({ action: 'iframeReady' }, '*');
+    </script>
+</body>
+</html>

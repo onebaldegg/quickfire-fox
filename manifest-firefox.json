@@ -31,7 +31,11 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["jspdf.umd.min.js", "logo-data.js"],
+      "resources": [
+        "jspdf.umd.min.js",
+        "logo-data.js",
+        "pdf-iframe.html"
+      ],
       "matches": ["<all_urls>"]
     }
   ],
