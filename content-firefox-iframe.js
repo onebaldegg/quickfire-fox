@@ -31,12 +31,18 @@ console.log('THE QUICKNESS - Content script IIFE started');
     // Create iframe to load jsPDF (proven technique to bypass CSP)
     createPDFIframe() {
       return new Promise((resolve, reject) => {
+        console.log('Creating PDF iframe...');
         const iframe = document.createElement('iframe');
         iframe.style.cssText = 'display: none; width: 0; height: 0; border: none;';
-        iframe.src = browser.runtime.getURL('pdf-iframe.html');
+        
+        const iframeUrl = browser.runtime.getURL('pdf-iframe.html');
+        console.log('PDF iframe URL:', iframeUrl);
+        iframe.src = iframeUrl;
         
         const messageHandler = (event) => {
+          console.log('Received message from iframe:', event.data);
           if (event.data.action === 'iframeReady') {
+            console.log('PDF iframe ready!');
             window.removeEventListener('message', messageHandler);
             resolve(iframe);
           }
@@ -44,15 +50,22 @@ console.log('THE QUICKNESS - Content script IIFE started');
         
         window.addEventListener('message', messageHandler);
         
-        iframe.onerror = () => {
+        iframe.onload = () => {
+          console.log('PDF iframe loaded successfully');
+        };
+        
+        iframe.onerror = (error) => {
+          console.error('PDF iframe load error:', error);
           window.removeEventListener('message', messageHandler);
           reject(new Error('Failed to load PDF iframe'));
         };
         
+        console.log('Appending PDF iframe to document body');
         document.body.appendChild(iframe);
         
         // Timeout after 10 seconds
         setTimeout(() => {
+          console.error('PDF iframe load timeout after 10 seconds');
           window.removeEventListener('message', messageHandler);
           reject(new Error('PDF iframe load timeout'));
         }, 10000);
@@ -315,9 +328,11 @@ console.log('THE QUICKNESS - Content script IIFE started');
     }
 
     async savePDF(capturedData, note, customFilename = null) {
+      console.log('savePDF called - Libraries loaded:', this.librariesLoaded, 'PDF iframe:', !!this.pdfIframe);
+      
       if (!this.librariesLoaded || !this.pdfIframe) {
-        console.error('PDF iframe not ready');
-        this.showToast('PDF functionality not available', 'error');
+        console.error('PDF iframe not ready - Libraries loaded:', this.librariesLoaded, 'PDF iframe exists:', !!this.pdfIframe);
+        this.showToast('PDF functionality not available - please refresh and try again', 'error');
         return;
       }
 
