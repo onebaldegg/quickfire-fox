@@ -63,56 +63,38 @@
       }
     }
 
-    // Load jsPDF using blob URL to bypass Firefox CSP restrictions
+    // Load jsPDF by directly executing the library code in Firefox
     async loadjsPDF() {
-        console.log('Firefox: Starting jsPDF library loading...');
+        console.log('Firefox: Loading jsPDF directly...');
         
         try {
-            // First try to get the jsPDF script content
+            // Fetch the jsPDF library content
             const response = await fetch(browser.runtime.getURL('jspdf.umd.min.js'));
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             
             const scriptContent = await response.text();
-            console.log('Firefox: jsPDF content fetched, creating blob...');
+            console.log('Firefox: jsPDF content fetched, executing directly...');
             
-            // Create a blob URL to bypass CSP
-            const blob = new Blob([scriptContent], { type: 'application/javascript' });
-            const blobUrl = URL.createObjectURL(blob);
-            
-            // Create and inject script element
+            // Execute the library code directly in the window context
             const script = document.createElement('script');
-            script.src = blobUrl;
-            script.type = 'text/javascript';
+            script.textContent = scriptContent;
+            (document.head || document.documentElement).appendChild(script);
             
-            return new Promise((resolve, reject) => {
-                script.onload = () => {
-                    console.log('Firefox: jsPDF loaded successfully via blob URL');
-                    URL.revokeObjectURL(blobUrl);
-                    
-                    // Verify jsPDF is available
-                    if (typeof window.jsPDF !== 'undefined') {
-                        console.log('Firefox: jsPDF is now available on window object');
-                        this.librariesLoaded = true;
-                        resolve();
-                    } else {
-                        console.error('Firefox: jsPDF not found on window after loading');
-                        reject(new Error('jsPDF not available after loading'));
-                    }
-                };
-                
-                script.onerror = (error) => {
-                    console.error('Firefox: Error loading jsPDF blob:', error);
-                    URL.revokeObjectURL(blobUrl);
-                    reject(error);
-                };
-                
-                // Insert into document head
-                (document.head || document.documentElement).appendChild(script);
-            });
+            // Wait a moment for the library to initialize
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Verify jsPDF is available
+            if (typeof window.jsPDF !== 'undefined') {
+                console.log('Firefox: jsPDF is now available on window object');
+                this.librariesLoaded = true;
+                return true;
+            } else {
+                throw new Error('jsPDF not available after direct execution');
+            }
         } catch (error) {
-            console.error('Firefox: Failed to fetch jsPDF content:', error);
+            console.error('Firefox: Failed to load jsPDF directly:', error);
             throw error;
         }
     }
