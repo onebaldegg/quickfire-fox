@@ -160,7 +160,7 @@ console.log('THE QUICKNESS - Content script IIFE started');
 
       const content = document.createElement('div');
       content.style.cssText = `
-        background: white;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border-radius: 12px;
         padding: 24px;
         max-width: 90%;
@@ -176,17 +176,17 @@ console.log('THE QUICKNESS - Content script IIFE started');
                style="width: 32px; height: 32px; object-fit: contain;" 
                onerror="this.style.display='none'"
                onload="console.log('Logo image loaded successfully in popup')">
-          <h2 style="margin: 0; color: #333; font-size: 20px; font-weight: 600;">THE QUICKNESS</h2>
+          <h2 style="margin: 0; color: white; font-size: 20px; font-weight: 600;">THE QUICKNESS</h2>
           <button id="quickness-close" style="
             margin-left: auto;
-            background: #f5f5f5;
+            background: rgba(255,255,255,0.2);
             border: none;
             border-radius: 6px;
             width: 32px;
             height: 32px;
             cursor: pointer;
             font-size: 18px;
-            color: #666;
+            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -200,42 +200,35 @@ console.log('THE QUICKNESS - Content script IIFE started');
         </div>
         
         <div style="margin-bottom: 20px;">
-          <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Add your note:</label>
+          <label style="display: block; margin-bottom: 8px; font-weight: 500; color: white;">Add your note:</label>
           <textarea id="quickness-note" placeholder="Enter your note here..." style="
             width: 100%;
             height: 100px;
             padding: 12px;
-            border: 2px solid #e1e5e9;
+            border: 2px solid rgba(255,255,255,0.3);
             border-radius: 8px;
             font-size: 14px;
             resize: vertical;
             font-family: inherit;
             outline: none;
             transition: border-color 0.2s;
+            background: rgba(255,255,255,0.1);
+            color: white;
           "></textarea>
         </div>
         
-        <div style="display: flex; gap: 12px; justify-content: flex-end;">
-          <button id="quickness-bookmark" style="
-            padding: 12px 24px;
-            background: #e3f2fd;
-            color: #1976d2;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.2s;
-          ">Save Bookmark</button>
+        <div style="display: flex; justify-content: center;">
           <button id="quickness-save" style="
             padding: 12px 24px;
-            background: #4caf50;
+            background: #8B5CF6;
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 500;
             transition: background-color 0.2s;
-          ">Save PDF</button>
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+          ">Save Bookmark & PDF</button>
         </div>
       `;
 
@@ -253,13 +246,8 @@ console.log('THE QUICKNESS - Content script IIFE started');
 
       document.getElementById('quickness-save').onclick = () => {
         const note = document.getElementById('quickness-note').value;
-        console.log(`Save PDF started with note: ${note}`);
-        this.savePDF(capturedData, note);
-      };
-
-      document.getElementById('quickness-bookmark').onclick = () => {
-        const note = document.getElementById('quickness-note').value;
-        this.saveBookmark(capturedData, note);
+        console.log(`Save Bookmark & PDF started with note: ${note}`);
+        this.saveBoth(capturedData, note);
       };
 
       // Focus on textarea
@@ -268,7 +256,7 @@ console.log('THE QUICKNESS - Content script IIFE started');
       }, 100);
     }
 
-    async savePDF(capturedData, note) {
+    async savePDF(capturedData, note, customFilename = null) {
       if (!this.librariesLoaded || !this.pdfIframe) {
         console.error('PDF iframe not ready');
         this.showToast('PDF functionality not available', 'error');
@@ -317,8 +305,7 @@ console.log('THE QUICKNESS - Content script IIFE started');
         const pdfArray = await responsePromise;
         
         // Generate filename and send to background
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
-        const filename = `quickness-${timestamp}.pdf`;
+        const filename = customFilename ? `${customFilename}.pdf` : `${this.generateFilename(note)}.pdf`;
         
         await browser.runtime.sendMessage({
           action: 'downloadPDF',
@@ -335,10 +322,49 @@ console.log('THE QUICKNESS - Content script IIFE started');
       }
     }
 
+    generateFilename(note) {
+      const now = new Date();
+      
+      // Format: MMDDYY HHMM
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const year = String(now.getFullYear()).slice(-2);
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      
+      const dateTime = `${month}${day}${year} ${hours}${minutes}`;
+      
+      // Get first 5 words of note
+      const words = note.trim().split(/\s+/).slice(0, 5).join(' ');
+      const notePrefix = words || 'untitled';
+      
+      return `${dateTime} ${notePrefix}`;
+    }
+
+    async saveBoth(capturedData, note) {
+      try {
+        const filename = this.generateFilename(note);
+        
+        // Save bookmark first
+        await browser.runtime.sendMessage({
+          action: 'createBookmark',
+          filename: filename,
+          note: note,
+          url: capturedData.url
+        });
+        
+        // Then save PDF
+        await this.savePDF(capturedData, note, filename);
+        
+      } catch (error) {
+        console.error('Error saving bookmark and PDF:', error);
+        this.showToast('Failed to save bookmark and PDF', 'error');
+      }
+    }
+
     async saveBookmark(capturedData, note) {
       try {
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
-        const filename = `quickness-${timestamp}`;
+        const filename = this.generateFilename(note);
         
         await browser.runtime.sendMessage({
           action: 'createBookmark',
