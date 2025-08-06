@@ -5,7 +5,10 @@
 (function() {
   'use strict';
   
+  console.log('THE QUICKNESS - Content script IIFE started');
+  
   if (window.theQuicknessExtension) {
+    console.log('THE QUICKNESS - Extension already exists, exiting');
     return;
   }
 
@@ -666,7 +669,13 @@
   }
 
   // Initialize extension
-  window.theQuicknessExtension = new TheQuicknessExtension();
+  console.log('THE QUICKNESS - About to create TheQuicknessExtension instance');
+  try {
+    window.theQuicknessExtension = new TheQuicknessExtension();
+    console.log('THE QUICKNESS - Extension instance created successfully');
+  } catch (error) {
+    console.error('THE QUICKNESS - Error creating extension instance:', error);
+  }
 
   // Cleanup on page unload
   window.addEventListener('beforeunload', () => {
