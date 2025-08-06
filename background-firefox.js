@@ -14,17 +14,20 @@ browser.action.onClicked.addListener(async (tab) => {
       files: ['content.css']
     });
     
-    // Inject scripts in order
+    // Inject scripts in the correct order for Firefox
+    console.log('Injecting jsPDF first...');
     await browser.scripting.executeScript({
       target: { tabId: tab.id },
       files: ['jspdf.umd.min.js']
     });
     
+    console.log('Injecting logo data...');
     await browser.scripting.executeScript({
       target: { tabId: tab.id },
       files: ['logo-data.js']
     });
     
+    console.log('Injecting content script...');
     await browser.scripting.executeScript({
       target: { tabId: tab.id },
       files: ['content-firefox.js']

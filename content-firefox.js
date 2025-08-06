@@ -64,64 +64,71 @@
     }
 
     async waitForLibraries() {
-      let attempts = 0;
-      console.log('Waiting for jsPDF library to load...');
+      console.log('Firefox: Starting jsPDF library loading...');
       
-      // Firefox-specific approach: try to load jsPDF directly
-      if (!window.jsPDF) {
-        try {
-          console.log('Attempting to load jsPDF directly in Firefox...');
-          // Try to inject jsPDF directly if it's not available
-          const script = document.createElement('script');
-          script.src = browser.runtime.getURL('jspdf.umd.min.js');
-          script.onload = () => {
-            console.log('✅ jsPDF loaded via direct script injection');
-          };
-          script.onerror = (error) => {
-            console.error('❌ Failed to load jsPDF via script injection:', error);
-          };
-          document.head.appendChild(script);
-          
-          // Wait for the script to load with shorter intervals
-          while (!window.jsPDF && attempts < 50) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-            attempts++;
-            
-            if (attempts % 5 === 0) {
-              console.log(`Firefox jsPDF loading attempt ${attempts}/50...`);
-              console.log('jsPDF available:', !!window.jsPDF);
-            }
-          }
-        } catch (error) {
-          console.error('Error during Firefox jsPDF loading:', error);
-        }
-      }
-      
-      // Fallback: traditional waiting approach
-      attempts = 0; // Reset attempts counter
-      while (!window.jsPDF && attempts < 100) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-        
-        if (attempts % 10 === 0) {
-          console.log(`Library loading attempt ${attempts}/100...`);
-          console.log('jsPDF available:', !!window.jsPDF);
-        }
-      }
-      
+      // Firefox approach: Check if jsPDF is already available
       if (window.jsPDF) {
+        console.log('✅ jsPDF already available');
         this.librariesLoaded = true;
-        console.log('✅ jsPDF library loaded successfully');
-        console.log('jsPDF version:', window.jsPDF?.version || 'unknown');
-      } else {
-        console.error('❌ jsPDF library failed to load after 10 seconds');
-        console.log('jsPDF available:', !!window.jsPDF);
-        
-        // Firefox fallback: Try to use a simplified approach
-        console.log('🔄 Attempting Firefox fallback method...');
-        this.useFallbackPDFMethod = true;
-        this.librariesLoaded = true; // Continue with fallback
+        return;
       }
+      
+      // Firefox-specific loading approach
+      try {
+        console.log('Firefox: Loading jsPDF dynamically...');
+        
+        // Method 1: Import as module if available
+        if (typeof importScripts === 'undefined') {
+          // We're in a content script, use dynamic script loading
+          await this.loadScriptDynamically('jspdf.umd.min.js');
+        }
+        
+        // Wait for jsPDF to be available
+        let attempts = 0;
+        while (!window.jsPDF && attempts < 100) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+          
+          if (attempts % 10 === 0) {
+            console.log(`Firefox jsPDF loading attempt ${attempts}/100...`);
+          }
+        }
+        
+        if (window.jsPDF) {
+          this.librariesLoaded = true;
+          console.log('✅ jsPDF library loaded successfully in Firefox');
+          console.log('jsPDF constructor available:', typeof window.jsPDF.jsPDF);
+        } else {
+          throw new Error('jsPDF failed to load after 10 seconds');
+        }
+        
+      } catch (error) {
+        console.error('❌ Failed to load jsPDF in Firefox:', error);
+        alert('PDF library failed to load. Please refresh the page and try again.');
+      }
+    }
+    
+    async loadScriptDynamically(scriptName) {
+      return new Promise((resolve, reject) => {
+        console.log(`Firefox: Dynamically loading ${scriptName}...`);
+        
+        const script = document.createElement('script');
+        script.src = browser.runtime.getURL(scriptName);
+        script.type = 'text/javascript';
+        
+        script.onload = () => {
+          console.log(`✅ ${scriptName} loaded successfully`);
+          resolve();
+        };
+        
+        script.onerror = (error) => {
+          console.error(`❌ Failed to load ${scriptName}:`, error);
+          reject(error);
+        };
+        
+        // Ensure script is added to head
+        (document.head || document.documentElement).appendChild(script);
+      });
     }
 
     async takeScreenshot() {
@@ -439,16 +446,9 @@
     async savePDF(note) {
       console.log('Save PDF started with note:', note);
       
-      if (!window.jsPDF && !this.useFallbackPDFMethod) {
+      if (!window.jsPDF) {
         console.error('jsPDF library not loaded');
         alert('PDF library not loaded. Please refresh the page and try again.');
-        return;
-      }
-      
-      // Use fallback method if jsPDF is not available
-      if (this.useFallbackPDFMethod || !window.jsPDF) {
-        console.log('Using fallback PDF method');
-        await this.savePDFWithFallback(note);
         return;
       }
       
@@ -634,97 +634,6 @@
       }
     }
 
-    async savePDFWithFallback(note) {
-      console.log('Starting fallback PDF method (no jsPDF)');
-      
-      try {
-        const data = this.capturedData;
-        
-        // Create filename using the same logic
-        let noteWords = '';
-        if (note && note.trim()) {
-          const words = note.trim().split(/\s+/);
-          noteWords = words
-            .slice(0, 5)
-            .join(' ')
-            .replace(/[^a-zA-Z0-9\s]/g, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-        }
-        
-        const now = new Date();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const year = String(now.getFullYear()).slice(-2);
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const timePrefix = `${month}${day}${year} ${hours}${minutes}`;
-        
-        let filename;
-        if (noteWords && noteWords.length > 0) {
-          filename = `${timePrefix} ${noteWords}.txt`;
-        } else {
-          filename = `${timePrefix} screenshot.txt`;
-        }
-        
-        filename = filename.replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, ' ').trim();
-        
-        // Create text content instead of PDF
-        let textContent = 'THE QUICKNESS - Website Capture\n';
-        textContent += '=====================================\n\n';
-        textContent += `Date: ${new Date().toLocaleString()}\n`;
-        textContent += `Source: ${data.url}\n\n`;
-        
-        if (note && note.trim()) {
-          textContent += `Note:\n${note}\n\n`;
-        }
-        
-        if (data.links && data.links.length > 0) {
-          textContent += 'Links found on page:\n';
-          textContent += '--------------------\n';
-          data.links.slice(0, 20).forEach(link => {
-            textContent += `• ${link.text}: ${link.href}\n`;
-          });
-        }
-        
-        // Create blob and download
-        const blob = new Blob([textContent], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        
-        // Create download link
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        console.log('Fallback text file download initiated');
-        this.showSuccessNotification(`Text file saved: ${filename}`);
-        
-        // Create bookmark if note is provided
-        if (note && note.trim()) {
-          try {
-            await browser.runtime.sendMessage({
-              action: 'createBookmark',
-              filename: filename,
-              note: note,
-              url: data.url
-            });
-          } catch (bookmarkError) {
-            console.warn('Bookmark creation failed:', bookmarkError);
-          }
-        }
-        
-        this.closeModal();
-        
-      } catch (error) {
-        console.error('Fallback save error:', error);
-        alert(`Failed to save file: ${error.message}`);
-      }
-    }
 
     closeModal() {
       if (this.modal) {
