@@ -20,7 +20,7 @@
     }
 
     init() {
-      console.log('THE QUICKNESS Firefox - Icon Click Screenshot Mode');
+      console.log('THE QUICKNESS Firefox - Extension initialized');
       this.waitForLibraries();
       this.setupMessageListener();
     }
@@ -29,9 +29,13 @@
       // Listen for messages from background script
       try {
         browser.runtime.onMessage.addListener((request, sender) => {
+          console.log('THE QUICKNESS - Received message:', request.action, request);
+          
           if (request.action === 'takeScreenshot') {
+            console.log('THE QUICKNESS - Processing takeScreenshot');
             this.takeScreenshot();
           } else if (request.action === 'showNoteModal') {
+            console.log('THE QUICKNESS - Processing showNoteModal');
             // Receive screenshot data directly from background script
             this.capturedData = {
               screenshot: request.screenshot,
@@ -50,8 +54,9 @@
             this.showFailureNotification(request.message);
           }
         });
+        console.log('THE QUICKNESS - Message listener set up successfully');
       } catch (error) {
-        console.log('Background script messaging unavailable:', error);
+        console.error('THE QUICKNESS - Background script messaging unavailable:', error);
       }
     }
 
@@ -190,7 +195,11 @@
     }
 
     showNoteModal() {
-      const backdrop = document.createElement('div');
+      console.log('THE QUICKNESS - showNoteModal called');
+      console.log('THE QUICKNESS - capturedData:', this.capturedData);
+      
+      try {
+        const backdrop = document.createElement('div');
       backdrop.className = 'tq-modal-backdrop';
       backdrop.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -328,6 +337,12 @@
       
       const textarea = this.modal.querySelector('#tq-note-input');
       setTimeout(() => textarea.focus(), 100);
+      
+      console.log('THE QUICKNESS - Modal created and added to DOM');
+      } catch (error) {
+        console.error('THE QUICKNESS - Error creating modal:', error);
+        alert('Error showing screenshot modal: ' + error.message);
+      }
     }
 
     loadScreenshotInModal() {
