@@ -335,64 +335,57 @@ console.log('THE QUICKNESS - Content script IIFE started');
         this.showToast('PDF functionality not available - please refresh and try again', 'error');
         return;
       }
-
-      try {
-        console.log('Creating PDF using iframe (proven technique)...');
+      
+      return new Promise((resolve, reject) => {
+        console.log('Starting PDF generation process...');
         
-        const requestId = Date.now().toString();
-        
-        // Set up message listener for PDF response
-        const responsePromise = new Promise((resolve, reject) => {
-          const messageHandler = (event) => {
-            if (event.data.action === 'pdfCreated' && event.data.requestId === requestId) {
-              window.removeEventListener('message', messageHandler);
-              if (event.data.success) {
-                resolve(event.data.pdfData);
-              } else {
-                reject(new Error(event.data.error || 'PDF creation failed'));
-              }
-            }
-          };
+        const messageHandler = (event) => {
+          console.log('Content script received iframe message:', event.data.action);
           
-          window.addEventListener('message', messageHandler);
-          
-          // Timeout after 30 seconds
-          setTimeout(() => {
+          if (event.data.action === 'pdfGenerated') {
             window.removeEventListener('message', messageHandler);
-            reject(new Error('PDF creation timeout'));
-          }, 30000);
-        });
-        
-        // Send PDF creation request to iframe
-        this.pdfIframe.contentWindow.postMessage({
-          action: 'createPDF',
-          requestId: requestId,
-          data: {
-            screenshot: capturedData.screenshot,
-            note: note,
-            url: capturedData.url
+            console.log('PDF generated successfully, sending to background script...');
+            
+            // Send PDF data to background script for download
+            browser.runtime.sendMessage({
+              action: 'downloadPDF',
+              pdfData: event.data.pdfData,
+              filename: event.data.filename
+            }).then(() => {
+              console.log('PDF download initiated successfully');
+              resolve();
+            }).catch(error => {
+              console.error('Failed to initiate PDF download:', error);
+              reject(error);
+            });
+          } else if (event.data.action === 'pdfError') {
+            window.removeEventListener('message', messageHandler);
+            console.error('PDF generation failed:', event.data.error);
+            reject(new Error(event.data.error));
           }
+        };
+        
+        window.addEventListener('message', messageHandler);
+        
+        // Send PDF generation request to iframe
+        const filename = customFilename || this.generateFilename(note);
+        console.log('Sending generatePDF message to iframe with filename:', filename);
+        
+        this.pdfIframe.contentWindow.postMessage({
+          action: 'generatePDF',
+          screenshot: capturedData.screenshot,
+          links: capturedData.links,
+          filename: filename,
+          note: note,
+          url: capturedData.url
         }, '*');
         
-        // Wait for PDF creation
-        const pdfArray = await responsePromise;
-        
-        // Generate filename and send to background
-        const filename = customFilename ? `${customFilename}.pdf` : `${this.generateFilename(note)}.pdf`;
-        
-        await browser.runtime.sendMessage({
-          action: 'downloadPDF',
-          pdfData: pdfArray,
-          filename: filename
-        });
-        
-        console.log('PDF download request sent to background script');
-        document.getElementById('the-quickness-modal').remove();
-        
-      } catch (error) {
-        console.error('Error in savePDF:', error);
-        this.showToast('Failed to save PDF: ' + error.message, 'error');
-      }
+        // Timeout after 30 seconds
+        setTimeout(() => {
+          window.removeEventListener('message', messageHandler);
+          reject(new Error('PDF generation timeout'));
+        }, 30000);
+      });
     }
 
     generateFilename(note) {

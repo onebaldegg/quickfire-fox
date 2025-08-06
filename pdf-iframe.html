@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>jsPDF Loader</title>
+    <title>THE QUICKNESS PDF Generator</title>
     <style>
         body, html {
             margin: 0;
@@ -9,78 +9,104 @@
             height: 100%;
             width: 100%;
             overflow: hidden;
+            display: none; /* Hidden iframe */
         }
     </style>
 </head>
 <body>
-    <!-- Load jsPDF in iframe to bypass CSP -->
-    <script src="jspdf.umd.min.js"></script>
     <script>
-        // Expose jsPDF to parent window
-        window.addEventListener('message', function(event) {
-            if (event.data.action === 'createPDF') {
-                try {
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF('p', 'mm', 'a4');
-                    
-                    // Create PDF with provided data
-                    const { screenshot, note, url } = event.data.data;
-                    
-                    // Add screenshot
-                    const img = new Image();
-                    img.onload = function() {
-                        const imgWidth = 190;
-                        const imgHeight = (img.height * imgWidth) / img.width;
+        console.log('PDF iframe starting up...');
+        
+        // Load jsPDF using the extension URL
+        const script = document.createElement('script');
+        script.src = 'jspdf.umd.min.js';
+        
+        script.onload = function() {
+            console.log('PDF iframe: jsPDF loaded successfully');
+            
+            // Set up message handler for PDF generation
+            window.addEventListener('message', function(event) {
+                console.log('PDF iframe received message:', event.data.action);
+                
+                if (event.data.action === 'generatePDF') {
+                    try {
+                        console.log('PDF iframe: Starting PDF generation...');
                         
-                        doc.addImage(screenshot, 'PNG', 10, 10, imgWidth, imgHeight);
+                        const { screenshot, links, filename, note, url } = event.data;
                         
-                        // Add note if provided
-                        if (note && note.trim()) {
-                            doc.setFontSize(12);
-                            doc.text(`Note: ${note}`, 10, imgHeight + 25);
+                        // Create new PDF document with full page dimensions
+                        const { jsPDF } = window.jspdf;
+                        const doc = new jsPDF({
+                            orientation: 'portrait',
+                            unit: 'px',
+                            format: [1536, 4819] // Match captured screenshot size
+                        });
+                        
+                        // Add the screenshot image (full page)
+                        doc.addImage(screenshot, 'PNG', 0, 0, 1536, 4819);
+                        
+                        // Add clickable link areas if links exist
+                        if (links && links.length > 0) {
+                            console.log(`PDF iframe: Adding ${links.length} clickable links`);
+                            links.forEach(link => {
+                                if (link.href && link.x !== undefined && link.y !== undefined) {
+                                    doc.link(link.x, link.y, link.width, link.height, { url: link.href });
+                                }
+                            });
                         }
                         
-                        // Add URL
-                        doc.setFontSize(10);
-                        doc.text(`Source: ${url}`, 10, imgHeight + (note && note.trim() ? 35 : 25));
+                        // Add note as text overlay if provided
+                        if (note && note.trim()) {
+                            doc.setFontSize(12);
+                            doc.setTextColor(0, 0, 0);
+                            doc.setFillColor(255, 255, 255);
+                            // Add note with white background at bottom
+                            const noteLines = doc.splitTextToSize(`Note: ${note}`, 1500);
+                            const noteHeight = noteLines.length * 15;
+                            doc.rect(20, 4760, 1496, noteHeight + 20, 'F');
+                            doc.text(noteLines, 30, 4780);
+                        }
                         
-                        // Generate PDF as arraybuffer
-                        const pdfOutput = doc.output('arraybuffer');
-                        const pdfArray = Array.from(new Uint8Array(pdfOutput));
+                        // Generate PDF as array buffer
+                        const pdfData = doc.output('arraybuffer');
+                        const pdfArray = Array.from(new Uint8Array(pdfData));
                         
-                        // Send back to parent
-                        event.source.postMessage({
-                            action: 'pdfCreated',
-                            success: true,
+                        console.log('PDF iframe: PDF generated successfully, size:', pdfArray.length);
+                        
+                        // Send PDF data back to parent
+                        window.parent.postMessage({
+                            action: 'pdfGenerated',
                             pdfData: pdfArray,
-                            requestId: event.data.requestId
+                            filename: filename,
+                            success: true
                         }, '*');
-                    };
-                    
-                    img.onerror = function() {
-                        event.source.postMessage({
-                            action: 'pdfCreated',
-                            success: false,
-                            error: 'Failed to load image',
-                            requestId: event.data.requestId
+                        
+                    } catch (error) {
+                        console.error('PDF iframe: Error generating PDF:', error);
+                        window.parent.postMessage({
+                            action: 'pdfError',
+                            error: error.message,
+                            success: false
                         }, '*');
-                    };
-                    
-                    img.src = screenshot;
-                    
-                } catch (error) {
-                    event.source.postMessage({
-                        action: 'pdfCreated',
-                        success: false,
-                        error: error.message,
-                        requestId: event.data.requestId
-                    }, '*');
+                    }
                 }
-            }
-        });
+            });
+            
+            // Notify parent that iframe is ready
+            console.log('PDF iframe: Notifying parent that iframe is ready');
+            window.parent.postMessage({ action: 'iframeReady' }, '*');
+        };
         
-        // Notify parent that iframe is ready
-        window.parent.postMessage({ action: 'iframeReady' }, '*');
+        script.onerror = function() {
+            console.error('PDF iframe: Failed to load jsPDF library');
+            window.parent.postMessage({
+                action: 'iframeError',
+                error: 'Failed to load jsPDF library'
+            }, '*');
+        };
+        
+        console.log('PDF iframe: Loading jsPDF script...');
+        document.head.appendChild(script);
     </script>
 </body>
 </html>
