@@ -14,13 +14,7 @@ browser.action.onClicked.addListener(async (tab) => {
       files: ['content.css']
     });
     
-    // Inject scripts in the correct order for Firefox
-    console.log('Injecting jsPDF first...');
-    await browser.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ['jspdf.umd.min.js']
-    });
-    
+    // Inject logo data first, then content script (jsPDF will be loaded via blob)
     console.log('Injecting logo data...');
     await browser.scripting.executeScript({
       target: { tabId: tab.id },
