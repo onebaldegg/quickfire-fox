@@ -176,7 +176,7 @@ console.log('THE QUICKNESS - Content script IIFE started');
       logoContainer.style.cssText = 'display: inline-block; background: #333; border-radius: 6px; padding: 8px 12px;';
       
       const logoImg = document.createElement('img');
-      logoImg.src = window.logoDataUrl || '';
+      logoImg.src = window.GITHUB_ASSETS?.LOGO_URL || window.LOGO_BASE64 || '';
       logoImg.alt = 'THE QUICKNESS';
       logoImg.style.cssText = 'height: 69px; width: auto; border-radius: 6px; display: block;';
       
