@@ -171,68 +171,81 @@ console.log('THE QUICKNESS - Content script IIFE started');
       `;
 
       content.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
             <img src="${typeof window.logoDataUrl !== 'undefined' ? window.logoDataUrl : ''}" 
-                 style="width: 32px; height: 32px; object-fit: contain;" 
+                 style="width: 40px; height: 40px; object-fit: contain;" 
                  onerror="this.style.display='none'"
                  onload="console.log('Logo image loaded successfully in popup')">
-            <h2 style="margin: 0; color: white; font-size: 20px; font-weight: 600;">THE QUICKNESS</h2>
+            <h2 style="margin: 0; color: white; font-size: 18px; font-weight: 600;">THE QUICKNESS</h2>
           </div>
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="color: rgba(255,255,255,0.8); font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${capturedData.url}</span>
-            <button id="quickness-close" style="
-              background: rgba(255,255,255,0.2);
-              border: none;
-              border-radius: 6px;
-              width: 32px;
-              height: 32px;
-              cursor: pointer;
-              font-size: 18px;
-              color: white;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            ">×</button>
+          <button id="quickness-close" style="
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 16px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          ">×</button>
+        </div>
+        
+        <div style="margin-bottom: 16px;">
+          <div style="color: white; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Source: ${capturedData.url}</div>
+        </div>
+        
+        <div style="margin-bottom: 16px;">
+          <div style="color: white; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Screenshot Preview:</div>
+          <div style="background: white; border-radius: 8px; padding: 8px;">
+            <img id="quickness-screenshot" src="${capturedData.screenshot}" 
+                 style="width: 100%; height: auto; border-radius: 4px; display: block;"
+                 onload="console.log('Screenshot loaded successfully in modal')">
           </div>
         </div>
         
         <div style="margin-bottom: 20px;">
-          <img id="quickness-screenshot" src="${capturedData.screenshot}" 
-               style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
-               onload="console.log('Screenshot loaded successfully in modal')">
-        </div>
-        
-        <div style="margin-bottom: 20px;">
-          <label style="display: block; margin-bottom: 8px; font-weight: 500; color: white;">Add your note:</label>
-          <textarea id="quickness-note" placeholder="Enter your note here..." style="
+          <div style="color: white; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Your Note:</div>
+          <textarea id="quickness-note" placeholder="Add your note here..." style="
             width: 100%;
-            height: 100px;
+            height: 80px;
             padding: 12px;
-            border: 2px solid rgba(255,255,255,0.3);
+            border: none;
             border-radius: 8px;
             font-size: 14px;
             resize: vertical;
             font-family: inherit;
             outline: none;
-            transition: border-color 0.2s;
-            background: rgba(255,255,255,0.1);
-            color: white;
+            background: white;
+            color: #333;
+            box-sizing: border-box;
           "></textarea>
         </div>
         
-        <div style="display: flex; justify-content: center;">
-          <button id="quickness-save" style="
-            padding: 12px 24px;
-            background: #8B5CF6;
+        <div style="display: flex; justify-content: center; gap: 12px;">
+          <button id="quickness-cancel" style="
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: 500;
             transition: background-color 0.2s;
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-          ">Save Bookmark & PDF</button>
+          ">Cancel</button>
+          <button id="quickness-save" style="
+            padding: 10px 20px;
+            background: #4A90E2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+          ">Save PDF</button>
         </div>
       `;
 
@@ -245,6 +258,10 @@ console.log('THE QUICKNESS - Content script IIFE started');
 
       // Event listeners
       document.getElementById('quickness-close').onclick = () => {
+        document.body.removeChild(modal);
+      };
+
+      document.getElementById('quickness-cancel').onclick = () => {
         document.body.removeChild(modal);
       };
 
