@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Subfolder Download Feature - THE QUICKNESS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .feature-info {
+            background-color: #e8f4f8;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .test-steps {
+            background-color: #f0f8e8;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #28a745;
+        }
+        .folder-structure {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 15px 0;
+            border-left: 4px solid #6c757d;
+        }
+        .highlight {
+            background-color: #ffeb3b;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .success {
+            background-color: #d4edda;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+            margin: 15px 0;
+        }
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .before, .after {
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .before {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        .after {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>THE QUICKNESS - Subfolder Download Feature</h1>
+        
+        <div class="feature-info">
+            <h2>📁 New Feature: Organized PDF Storage</h2>
+            <p><strong>Enhancement:</strong> PDFs now save to a dedicated "THE QUICKNESS" subfolder within your Downloads directory for better organization.</p>
+            <p><strong>Auto-Creation:</strong> If the "THE QUICKNESS" folder doesn't exist, Chrome automatically creates it when you save your first PDF.</p>
+            <p><strong>Benefit:</strong> All your THE QUICKNESS screenshots are now organized in one dedicated folder, separate from other downloads.</p>
+        </div>
+        
+        <div class="comparison">
+            <div class="before">
+                <h3>❌ Previous Behavior</h3>
+                <div class="folder-structure">
+                    Downloads/<br>
+                    ├── 070925_1410_screenshot.pdf<br>
+                    ├── 070925_1415_notes.pdf<br>
+                    ├── other_random_file.pdf<br>
+                    └── another_download.zip
+                </div>
+                <p><strong>Problem:</strong> THE QUICKNESS PDFs mixed with other downloads</p>
+            </div>
+            <div class="after">
+                <h3>✅ New Behavior</h3>
+                <div class="folder-structure">
+                    Downloads/<br>
+                    ├── THE QUICKNESS/<br>
+                    │   ├── 070925_1410_screenshot.pdf<br>
+                    │   └── 070925_1415_notes.pdf<br>
+                    ├── other_random_file.pdf<br>
+                    └── another_download.zip
+                </div>
+                <p><strong>Solution:</strong> All THE QUICKNESS PDFs organized in dedicated subfolder</p>
+            </div>
+        </div>
+        
+        <div class="test-steps">
+            <h3>📋 Test Steps to Verify Feature:</h3>
+            <ol>
+                <li>Take a screenshot of this page with notes: <span class="highlight">"test subfolder feature"</span></li>
+                <li>Save the PDF and note the success message: <span class="highlight">"PDF saved to Downloads/THE QUICKNESS: [filename]"</span></li>
+                <li>Open your Downloads folder in File Explorer/Finder</li>
+                <li>Look for the <span class="highlight">"THE QUICKNESS"</span> subfolder (created automatically if needed)</li>
+                <li>Open the "THE QUICKNESS" folder and verify your PDF is inside</li>
+                <li>Take additional screenshots to see them accumulate in the same folder</li>
+            </ol>
+        </div>
+        
+        <div class="success">
+            <h3>✅ Expected Results:</h3>
+            <ul>
+                <li><strong>Automatic Folder Creation:</strong> "THE QUICKNESS" folder appears in Downloads if it didn't exist before</li>
+                <li><strong>Organized Storage:</strong> All PDFs save to Downloads/THE QUICKNESS/ instead of Downloads/</li>
+                <li><strong>Updated Notifications:</strong> Success messages show "Downloads/THE QUICKNESS" location</li>
+                <li><strong>Clean Downloads Folder:</strong> Your main Downloads folder stays uncluttered</li>
+            </ul>
+        </div>
+        
+        <div class="feature-info">
+            <h3>🛠️ Technical Implementation</h3>
+            <p><strong>API Used:</strong> chrome.downloads.download() with filename parameter</p>
+            <div class="folder-structure">
+                // Before:<br>
+                filename: "070925_1410_test.pdf"<br><br>
+                // After:<br>
+                filename: "THE QUICKNESS/070925_1410_test.pdf"
+            </div>
+            <p><strong>Chrome Behavior:</strong> Automatically creates subdirectories specified in the filename path.</p>
+        </div>
+        
+        <div class="test-steps">
+            <h3>🎯 Benefits of This Feature</h3>
+            <ul>
+                <li><strong>Better Organization:</strong> Easy to find all your THE QUICKNESS screenshots in one place</li>
+                <li><strong>Cleaner Downloads Folder:</strong> Reduces clutter in your main Downloads directory</li>
+                <li><strong>Backup & Sharing:</strong> Simple to backup or share entire collection of screenshots</li>
+                <li><strong>Professional Workflow:</strong> Maintains project organization for research and documentation</li>
+            </ul>
+        </div>
+        
+        <div class="success">
+            <h3>💡 Pro Tip</h3>
+            <p>You can bookmark the "THE QUICKNESS" folder in your file manager for even faster access to your screenshot collection!</p>
+        </div>
+    </div>
+</body>
+</html>

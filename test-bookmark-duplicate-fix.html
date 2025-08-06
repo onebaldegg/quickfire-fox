@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Bookmark Duplicate Fix - THE QUICKNESS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .fix-info {
+            background-color: #e8f4f8;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .test-steps {
+            background-color: #f0f8e8;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #28a745;
+        }
+        .test-steps ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .test-steps li {
+            margin: 10px 0;
+            line-height: 1.5;
+        }
+        .expected-result {
+            background-color: #fff3cd;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            margin-bottom: 20px;
+        }
+        .code-block {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            border-left: 4px solid #6c757d;
+        }
+        .highlight {
+            background-color: #ffeb3b;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .error-example {
+            background-color: #f8d7da;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #dc3545;
+            margin: 10px 0;
+        }
+        .success-example {
+            background-color: #d4edda;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #28a745;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>THE QUICKNESS - Bookmark Duplicate Detection Fix</h1>
+        
+        <div class="fix-info">
+            <h2>🔧 Issue Fixed</h2>
+            <p><strong>Problem:</strong> When taking multiple screenshots of the same page with different notes, the extension showed "Bookmark already exists: [old filename]" instead of creating new bookmarks with the current filename.</p>
+            <p><strong>Root Cause:</strong> The duplicate detection logic only checked by URL, not by URL + title combination.</p>
+            <p><strong>Solution:</strong> Modified duplicate detection to check both URL and title, allowing multiple bookmarks of the same page with different notes.</p>
+        </div>
+        
+        <div class="test-steps">
+            <h3>📋 Test Steps to Verify Fix:</h3>
+            <ol>
+                <li>Take a screenshot of this page with notes: <span class="highlight">"First test bookmark"</span></li>
+                <li>Save the PDF - should create bookmark with title "First test bookmark"</li>
+                <li>Take another screenshot of the same page with notes: <span class="highlight">"Second test bookmark"</span></li>
+                <li>Save the PDF - should create a NEW bookmark with title "Second test bookmark"</li>
+                <li>Take a third screenshot with notes: <span class="highlight">"Third test bookmark"</span></li>
+                <li>Save the PDF - should create another NEW bookmark with title "Third test bookmark"</li>
+                <li>Try to create a duplicate by using the same notes: <span class="highlight">"First test bookmark"</span></li>
+                <li>This should show "Bookmark already exists: First test bookmark" (duplicate prevention)</li>
+            </ol>
+        </div>
+        
+        <div class="expected-result">
+            <h3>✅ Expected Results:</h3>
+            <ul>
+                <li>Each unique note should create a new bookmark</li>
+                <li>Multiple bookmarks for the same page with different titles should be allowed</li>
+                <li>Only exact duplicates (same URL + same title) should be prevented</li>
+                <li>The success message should show the correct current filename, not old ones</li>
+            </ul>
+        </div>
+        
+        <div class="error-example">
+            <h4>❌ Previous Behavior (Fixed):</h4>
+            <div class="code-block">
+                User enters: "I have to use the chair"<br>
+                System shows: "Bookmark already exists: test test test test test"<br>
+                Result: No new bookmark created
+            </div>
+        </div>
+        
+        <div class="success-example">
+            <h4>✅ New Behavior (After Fix):</h4>
+            <div class="code-block">
+                User enters: "I have to use the chair"<br>
+                System shows: "Bookmark saved: I have to use the chair"<br>
+                Result: New bookmark created with correct title
+            </div>
+        </div>
+        
+        <div class="fix-info">
+            <h3>🛠️ Technical Details</h3>
+            <p><strong>Before:</strong> Duplicate detection only checked URL</p>
+            <div class="code-block">
+                if (existingBookmarks.length > 0) {<br>
+                &nbsp;&nbsp;// Any bookmark with same URL = duplicate<br>
+                &nbsp;&nbsp;return "already exists";<br>
+                }
+            </div>
+            <p><strong>After:</strong> Duplicate detection checks URL + title combination</p>
+            <div class="code-block">
+                const duplicateBookmark = existingBookmarks.find(bookmark => <br>
+                &nbsp;&nbsp;bookmark.url === url && bookmark.title === bookmarkTitle<br>
+                );<br>
+                if (duplicateBookmark) {<br>
+                &nbsp;&nbsp;// Only exact URL + title match = duplicate<br>
+                &nbsp;&nbsp;return "already exists";<br>
+                }
+            </div>
+        </div>
+        
+        <div class="test-steps">
+            <h3>🎯 Use Case Scenarios</h3>
+            <ul>
+                <li><strong>Multiple Screenshots:</strong> Take several screenshots of the same page with different notes - each should create a separate bookmark</li>
+                <li><strong>Exact Duplicates:</strong> Try to create the same bookmark twice - should be prevented</li>
+                <li><strong>Different Pages:</strong> Screenshots of different pages should always create new bookmarks</li>
+                <li><strong>Empty Notes:</strong> Screenshots with no notes should use page title as bookmark title</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

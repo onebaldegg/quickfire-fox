@@ -1,73 +1,119 @@
-# Welcome to your Lovable project
+# THE QUICKNESS - Chrome Extension
 
-## Project info
+A powerful Chrome extension for quick capture of screenshots with notes and automatic bookmark saving.
 
-**URL**: https://lovable.dev/projects/6a4b30eb-1626-4d0a-bbe1-62e6a6aab9fc
+## Features
 
-## How can I edit this code?
+- **One-Click Screenshot**: Click the extension icon to instantly capture the visible viewport
+- **Note Modal**: Add personal notes with a purple-themed interface
+- **Local PDF Saving**: Automatically saves screenshots with notes as landscape PDFs
+- **Link Preservation**: Maintains clickable links from the original webpage in the PDF
+- **Automatic Bookmarking**: Saves the current page URL as a bookmark in "THE QUICKNESS" folder
+- **Formatted Layout**: PDFs include logo, source URL, screenshot, and notes in organized layout
 
-There are several ways of editing your application.
+## Installation
 
-**Use Lovable**
+### Method 1: Load Unpacked Extension (Developer Mode)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/6a4b30eb-1626-4d0a-bbe1-62e6a6aab9fc) and start prompting.
+1. Open Chrome and navigate to `chrome://extensions/`
+2. Enable "Developer mode" by toggling the switch in the top right corner
+3. Click "Load unpacked" button
+4. Select the `the-quickness-extension` folder containing this extension
+5. The extension should now appear in your extensions list and be ready to use
 
-Changes made via Lovable will be committed automatically to this repo.
+### Method 2: Chrome Web Store (Future)
+*This extension will be submitted to the Chrome Web Store in the future*
 
-**Use your preferred IDE**
+## Usage
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Screenshot Capture
+1. Click the extension icon on any webpage
+2. The extension will automatically capture the visible viewport
+3. A purple-themed modal will appear with the screenshot preview
+4. Add your notes in the text area
+5. Click "Save PDF" to save both the PDF and create a bookmark
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## File Organization
 
-Follow these steps:
+All captures are saved as PDFs in your browser's Downloads folder. Bookmarks are saved in "THE QUICKNESS" folder on your Bookmarks Bar.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+**Naming Format**: `MMDDYY HHMM first-three-words-of-note.pdf`
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+**Example**: A screenshot on May 12, 2025 at 2:23pm with note "Shark bites man in the ocean" saves as:
+- **PDF**: `051225 1423 Shark bites man.pdf`
+- **Bookmark**: `051225 1423 Shark bites man`
 
-# Step 3: Install the necessary dependencies.
-npm i
+## PDF Layout
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+Each PDF contains:
+1. **Header**: "THE QUICKNESS" logo (top-left)
+2. **Source URL**: Clickable link to the original webpage (top-right)
+3. **Screenshot**: Full viewport capture with preserved clickable links
+4. **Notes**: Your personal notes below the screenshot
 
-**Edit a file directly in GitHub**
+## Permissions
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+This extension requires the following permissions:
+- **activeTab**: To interact with the current webpage
+- **scripting**: To inject content scripts for capture functionality
+- **downloads**: To save PDFs to your local Downloads folder
+- **storage**: To store extension settings
+- **tabs**: To access tab information for URLs and titles
+- **bookmarks**: To create and organize bookmarks automatically
+- **host_permissions**: To work on all websites
 
-**Use GitHub Codespaces**
+## Technical Details
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- **Manifest Version**: 3 (Latest Chrome extension standard)
+- **Screenshot Technology**: HTML2Canvas for high-quality viewport capture
+- **PDF Generation**: jsPDF for creating formatted landscape PDFs
+- **File Saving**: Chrome Downloads API for local file management
+- **Bookmarking**: Chrome Bookmarks API for automatic bookmark creation
 
-## What technologies are used for this project?
+## Troubleshooting
 
-This project is built with:
+### Extension Not Working
+- Ensure Developer Mode is enabled in Chrome Extensions
+- Check that the extension is enabled in your extensions list
+- Refresh the webpage and try again
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Captures Not Saving
+- Check your Downloads folder for PDF files
+- Ensure Chrome has permission to download files
+- Check Chrome's download settings
 
-## How can I deploy this project?
+### Screenshots Appear Blank
+- Some websites may block screenshot capture due to security policies
+- Try refreshing the page and capturing again
+- Check browser console for any error messages
 
-Simply open [Lovable](https://lovable.dev/projects/6a4b30eb-1626-4d0a-bbe1-62e6a6aab9fc) and click on Share -> Publish.
+### Bookmarks Not Created
+- Ensure the extension has bookmarks permission
+- Check if "THE QUICKNESS" folder appears in your Bookmarks Bar
+- Verify you're not on a restricted page (chrome:// URLs)
 
-## Can I connect a custom domain to my Lovable project?
+## Privacy
 
-Yes, you can!
+THE QUICKNESS operates entirely locally:
+- No data is sent to external servers
+- All captures are saved locally on your computer
+- No personal information is collected or transmitted
+- URLs and content are only processed locally for PDF generation and bookmarking
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Version History
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+### v1.0
+- Initial release with icon-click screenshot functionality
+- Purple-themed note modal with logo display
+- Landscape PDF generation with organized layout
+- Link preservation in screenshots and PDFs
+- Automatic Chrome bookmark creation
+- Local file saving with structured naming
+
+## Support
+
+For issues, bugs, or feature requests, please refer to the extension's support documentation or contact the developer.
+
+## License
+
+This extension is provided as-is for personal use. Please refer to the license file for detailed terms and conditions.
