@@ -67,23 +67,23 @@
       let attempts = 0;
       console.log('Waiting for jsPDF library to load...');
       
-      while (!window.jspdf && attempts < 100) {
+      while (!window.jsPDF && attempts < 100) {
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
         
         if (attempts % 10 === 0) {
           console.log(`Library loading attempt ${attempts}/100...`);
-          console.log('jsPDF available:', !!window.jspdf);
+          console.log('jsPDF available:', !!window.jsPDF);
         }
       }
       
-      if (window.jspdf) {
+      if (window.jsPDF) {
         this.librariesLoaded = true;
         console.log('✅ jsPDF library loaded successfully');
-        console.log('jsPDF version:', window.jspdf?.version || 'unknown');
+        console.log('jsPDF version:', window.jsPDF?.version || 'unknown');
       } else {
         console.error('❌ jsPDF library failed to load after 10 seconds');
-        console.log('jsPDF available:', !!window.jspdf);
+        console.log('jsPDF available:', !!window.jsPDF);
       }
     }
 
@@ -402,7 +402,7 @@
     async savePDF(note) {
       console.log('Save PDF started with note:', note);
       
-      if (!window.jspdf) {
+      if (!window.jsPDF) {
         console.error('jsPDF library not loaded');
         alert('PDF library not loaded. Please refresh the page and try again.');
         return;
@@ -445,7 +445,7 @@
         
         console.log('Final filename will be:', filename);
         
-        const jsPDF = window.jspdf.jsPDF;
+        const jsPDF = window.jsPDF.jsPDF;
         const pdf = new jsPDF('p', 'mm', 'a4');
         
         const pageWidth = pdf.internal.pageSize.getWidth();
