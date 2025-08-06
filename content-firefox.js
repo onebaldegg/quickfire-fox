@@ -318,7 +318,7 @@
       
       const notesTextarea = document.createElement('textarea');
       notesTextarea.id = 'tq-note-input';
-      notesTextarea.style.cssText = 'width: 100%; min-height: 81px; padding: 9px; border: 2px solid #e0e0e0; border-radius: 5px; resize: vertical; font-family: -apple-system, BlinkMacSystemFont, \\'Segoe UI\\', Roboto, sans-serif; font-size: 14px;';
+      notesTextarea.style.cssText = 'width: 100%; min-height: 81px; padding: 9px; border: 2px solid #e0e0e0; border-radius: 5px; resize: vertical; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px;';
       notesTextarea.placeholder = 'Add your note here...';
       notesTextarea.maxLength = 100;
       
