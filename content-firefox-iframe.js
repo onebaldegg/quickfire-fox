@@ -142,138 +142,175 @@ console.log('THE QUICKNESS - Content script IIFE started');
     }
 
     createModal(capturedData) {
+      // Create backdrop
+      const backdrop = document.createElement('div');
+      backdrop.className = 'tq-modal-backdrop';
+      backdrop.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.5); z-index: 2147483646;';
+      
+      // Create modal container with purple background
       const modal = document.createElement('div');
       modal.id = 'the-quickness-modal';
+      modal.className = 'tq-note-modal';
       modal.style.cssText = `
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #BF77F6;
+        border-radius: 9px;
+        padding: 20px;
+        box-shadow: 0 23px 69px rgba(0, 0, 0, 0.3);
         z-index: 2147483647;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        min-width: 403px;
+        max-width: 564px;
+        border: 2px solid #333;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       `;
 
-      const content = document.createElement('div');
-      content.style.cssText = `
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 12px;
-        padding: 24px;
-        max-width: 90%;
-        max-height: 90%;
-        overflow: auto;
-        position: relative;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-      `;
-
-      content.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <img src="${typeof window.logoDataUrl !== 'undefined' ? window.logoDataUrl : ''}" 
-                 style="width: 40px; height: 40px; object-fit: contain;" 
-                 onerror="this.style.display='none'"
-                 onload="console.log('Logo image loaded successfully in popup')">
-            <h2 style="margin: 0; color: white; font-size: 18px; font-weight: 600;">THE QUICKNESS</h2>
-          </div>
-          <button id="quickness-close" style="
-            background: rgba(255,255,255,0.2);
-            border: none;
-            border-radius: 4px;
-            width: 24px;
-            height: 24px;
-            cursor: pointer;
-            font-size: 16px;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          ">×</button>
-        </div>
+      // Create header with logo left, buttons right
+      const header = document.createElement('div');
+      header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;';
+      
+      // Logo container (left side)
+      const logoContainer = document.createElement('div');
+      logoContainer.style.cssText = 'display: inline-block; background: #333; border-radius: 6px; padding: 8px 12px;';
+      
+      const logoImg = document.createElement('img');
+      logoImg.src = window.logoDataUrl || '';
+      logoImg.alt = 'THE QUICKNESS';
+      logoImg.style.cssText = 'height: 69px; width: auto; border-radius: 6px; display: block;';
+      
+      logoImg.onerror = () => {
+        logoContainer.innerHTML = '';
+        logoContainer.style.cssText = 'display: inline-block; background: linear-gradient(45deg, #FF6B35, #F59E0B); border-radius: 6px; padding: 8px 12px; color: white; font-weight: bold; font-size: 14px; text-align: center; min-width: 120px;';
         
-        <div style="margin-bottom: 16px;">
-          <div style="color: white; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Source: ${capturedData.url}</div>
-        </div>
+        const logoText = document.createElement('div');
+        logoText.textContent = 'THE QUICKNESS';
+        logoText.style.cssText = 'margin: 0; line-height: 1.2;';
         
-        <div style="margin-bottom: 16px;">
-          <div style="color: white; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Screenshot Preview:</div>
-          <div style="background: white; border-radius: 8px; padding: 8px;">
-            <img id="quickness-screenshot" src="${capturedData.screenshot}" 
-                 style="width: 100%; height: auto; border-radius: 4px; display: block;"
-                 onload="console.log('Screenshot loaded successfully in modal')">
-          </div>
-        </div>
+        const subText = document.createElement('div');
+        subText.textContent = 'Screenshot & PDF Tool';
+        subText.style.cssText = 'font-size: 10px; opacity: 0.9; margin-top: 2px;';
         
-        <div style="margin-bottom: 20px;">
-          <div style="color: white; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Your Note:</div>
-          <textarea id="quickness-note" placeholder="Add your note here..." style="
-            width: 100%;
-            height: 80px;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            resize: vertical;
-            font-family: inherit;
-            outline: none;
-            background: white;
-            color: #333;
-            box-sizing: border-box;
-          "></textarea>
-        </div>
-        
-        <div style="display: flex; justify-content: center; gap: 12px;">
-          <button id="quickness-cancel" style="
-            padding: 10px 20px;
-            background: rgba(255,255,255,0.2);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.2s;
-          ">Cancel</button>
-          <button id="quickness-save" style="
-            padding: 10px 20px;
-            background: #4A90E2;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.2s;
-          ">Save PDF</button>
-        </div>
-      `;
-
-      modal.appendChild(content);
+        logoContainer.appendChild(logoText);
+        logoContainer.appendChild(subText);
+      };
+      
+      logoContainer.appendChild(logoImg);
+      
+      // Button container (right side)
+      const buttonContainer = document.createElement('div');
+      buttonContainer.style.cssText = 'display: flex; gap: 9px;';
+      
+      const cancelBtn = document.createElement('button');
+      cancelBtn.id = 'quickness-cancel';
+      cancelBtn.className = 'tq-button tq-button-secondary';
+      cancelBtn.style.cssText = 'padding: 9px 20px; border: none; border-radius: 5px; background: #6c757d; color: white; cursor: pointer; font-weight: 500; font-size: 14px;';
+      cancelBtn.textContent = 'Cancel';
+      
+      const saveBtn = document.createElement('button');
+      saveBtn.id = 'quickness-save';
+      saveBtn.className = 'tq-button tq-button-primary';
+      saveBtn.style.cssText = 'padding: 9px 20px; border: none; border-radius: 5px; background: #007cff; color: white; cursor: pointer; font-weight: 500; font-size: 14px;';
+      saveBtn.textContent = 'Save PDF';
+      
+      buttonContainer.appendChild(cancelBtn);
+      buttonContainer.appendChild(saveBtn);
+      
+      header.appendChild(logoContainer);
+      header.appendChild(buttonContainer);
+      
+      // White content container
+      const contentContainer = document.createElement('div');
+      contentContainer.style.cssText = 'background: white; border-radius: 7px; padding: 13px; margin-bottom: 13px;';
+      
+      // Source URL section
+      const sourceDiv = document.createElement('div');
+      sourceDiv.style.cssText = 'font-size: 12px; color: #666; word-break: break-all; margin-bottom: 9px;';
+      
+      const sourceLabel = document.createElement('strong');
+      sourceLabel.textContent = 'Source: ';
+      sourceDiv.appendChild(sourceLabel);
+      sourceDiv.appendChild(document.createTextNode(capturedData.url));
+      
+      // Screenshot Preview section
+      const screenshotSection = document.createElement('div');
+      screenshotSection.className = 'tq-preview-section';
+      screenshotSection.style.cssText = 'margin-bottom: 13px; padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;';
+      
+      const screenshotTitle = document.createElement('div');
+      screenshotTitle.className = 'tq-preview-title';
+      screenshotTitle.style.cssText = 'font-size: 14px; font-weight: 500; color: #495057; margin-bottom: 8px;';
+      screenshotTitle.textContent = 'Screenshot Preview:';
+      
+      const screenshotContent = document.createElement('div');
+      screenshotContent.className = 'tq-preview-content';
+      screenshotContent.style.cssText = 'max-height: 200px; overflow: auto; border: 1px solid #dee2e6; border-radius: 4px; background: white; padding: 8px;';
+      
+      const screenshotImg = document.createElement('img');
+      screenshotImg.className = 'tq-preview-image';
+      screenshotImg.src = capturedData.screenshot;
+      screenshotImg.style.cssText = 'max-width: 100%; max-height: 150px; object-fit: contain; border-radius: 4px;';
+      
+      screenshotContent.appendChild(screenshotImg);
+      screenshotSection.appendChild(screenshotTitle);
+      screenshotSection.appendChild(screenshotContent);
+      
+      // Notes section
+      const notesSection = document.createElement('div');
+      notesSection.className = 'tq-form-group';
+      
+      const notesLabel = document.createElement('label');
+      notesLabel.className = 'tq-label';
+      notesLabel.style.cssText = 'display: block; font-size: 14px; font-weight: 500; color: #333; margin-bottom: 6px;';
+      notesLabel.textContent = 'Your Note:';
+      
+      const notesTextarea = document.createElement('textarea');
+      notesTextarea.id = 'quickness-note';
+      notesTextarea.className = 'tq-textarea';
+      notesTextarea.style.cssText = 'width: 100%; min-height: 100px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 14px; line-height: 1.4; resize: vertical; font-family: inherit; transition: border-color 0.2s ease; box-sizing: border-box;';
+      notesTextarea.placeholder = 'Add your note here...';
+      
+      notesSection.appendChild(notesLabel);
+      notesSection.appendChild(notesTextarea);
+      
+      // Assemble content container
+      contentContainer.appendChild(sourceDiv);
+      contentContainer.appendChild(screenshotSection);
+      contentContainer.appendChild(notesSection);
+      
+      // Assemble modal
+      modal.appendChild(header);
+      modal.appendChild(contentContainer);
+      
+      document.body.appendChild(backdrop);
+      document.body.appendChild(modal);
       
       console.log(`Loading screenshot in modal, data URL length: ${capturedData.screenshot.length}`);
-      
-      document.body.appendChild(modal);
       console.log('THE QUICKNESS - Modal created and added to DOM');
 
       // Event listeners
-      document.getElementById('quickness-close').onclick = () => {
-        document.body.removeChild(modal);
+      backdrop.onclick = () => {
+        backdrop.remove();
+        modal.remove();
       };
 
-      document.getElementById('quickness-cancel').onclick = () => {
-        document.body.removeChild(modal);
+      cancelBtn.onclick = () => {
+        backdrop.remove();
+        modal.remove();
       };
 
-      document.getElementById('quickness-save').onclick = () => {
-        const note = document.getElementById('quickness-note').value;
+      saveBtn.onclick = () => {
+        const note = notesTextarea.value;
         console.log(`Save Bookmark & PDF started with note: ${note}`);
+        backdrop.remove();
+        modal.remove();
         this.saveBoth(capturedData, note);
       };
 
       // Focus on textarea
       setTimeout(() => {
-        document.getElementById('quickness-note').focus();
+        notesTextarea.focus();
       }, 100);
     }
 
