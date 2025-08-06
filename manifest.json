@@ -5,6 +5,12 @@
   "description": "Instant webpage screenshots to PDF with notes and bookmarks. Click extension icon to capture any page and save organized PDFs.",
   "author": "THE QUICKNESS Team",
   "homepage_url": "https://github.com/onebaldegg/The-Quickness-FINISHED",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "the-quickness@thequicknessteam.com",
+      "strict_min_version": "109.0"
+    }
+  },
   "permissions": [
     "activeTab",
     "scripting",
@@ -12,19 +18,17 @@
     "bookmarks"
   ],
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "scripts": ["background-firefox.js"]
   },
   "action": {
     "default_title": "THE QUICKNESS - Click to capture screenshot and create PDF"
   },
   "icons": {
-    "16": "icons/icon16.png",
-    "32": "icons/icon32.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "16": "icon16.png",
+    "32": "icon32.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
   },
-  "minimum_chrome_version": "96",
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   }
