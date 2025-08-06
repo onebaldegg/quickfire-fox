@@ -171,26 +171,30 @@ console.log('THE QUICKNESS - Content script IIFE started');
       `;
 
       content.innerHTML = `
-        <div style="display: flex; align-items: center; margin-bottom: 20px; gap: 12px;">
-          <img src="${typeof window.logoDataUrl !== 'undefined' ? window.logoDataUrl : ''}" 
-               style="width: 32px; height: 32px; object-fit: contain;" 
-               onerror="this.style.display='none'"
-               onload="console.log('Logo image loaded successfully in popup')">
-          <h2 style="margin: 0; color: white; font-size: 20px; font-weight: 600;">THE QUICKNESS</h2>
-          <button id="quickness-close" style="
-            margin-left: auto;
-            background: rgba(255,255,255,0.2);
-            border: none;
-            border-radius: 6px;
-            width: 32px;
-            height: 32px;
-            cursor: pointer;
-            font-size: 18px;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          ">×</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="${typeof window.logoDataUrl !== 'undefined' ? window.logoDataUrl : ''}" 
+                 style="width: 32px; height: 32px; object-fit: contain;" 
+                 onerror="this.style.display='none'"
+                 onload="console.log('Logo image loaded successfully in popup')">
+            <h2 style="margin: 0; color: white; font-size: 20px; font-weight: 600;">THE QUICKNESS</h2>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="color: rgba(255,255,255,0.8); font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${capturedData.url}</span>
+            <button id="quickness-close" style="
+              background: rgba(255,255,255,0.2);
+              border: none;
+              border-radius: 6px;
+              width: 32px;
+              height: 32px;
+              cursor: pointer;
+              font-size: 18px;
+              color: white;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            ">×</button>
+          </div>
         </div>
         
         <div style="margin-bottom: 20px;">
