@@ -5,6 +5,7 @@
 // Handle extension icon clicks
 browser.action.onClicked.addListener(async (tab) => {
   console.log('THE QUICKNESS icon clicked, injecting scripts and triggering screenshot');
+  console.log('THE QUICKNESS - Tab info:', tab.id, tab.url);
   
   try {
     // Inject CSS and scripts dynamically (activeTab permission)
