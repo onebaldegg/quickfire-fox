@@ -177,13 +177,30 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
     
     // Add note if provided
     if (note && note.trim()) {
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
-      doc.setFillColor(255, 255, 255);
-      const noteLines = doc.splitTextToSize(`Note: ${note}`, 1500);
-      const noteHeight = noteLines.length * 15;
-      doc.rect(20, 4760, 1496, noteHeight + 20, 'F');
-      doc.text(noteLines, 30, 4780);
+      const noteText = `Note: ${note}`;
+      doc.setFontSize(9); // A slightly smaller font size works better
+      doc.setTextColor(51, 51, 51); // A softer black text color (#333)
+      
+      // Calculate the width of the text area (90% of the PDF width)
+      const textWidth = pdfWidth * 0.9;
+      const noteLines = doc.splitTextToSize(noteText, textWidth);
+      
+      // Calculate the height of the note box
+      const lineHeight = 5; // Line height in mm for font size 9
+      const boxPadding = 4; // Padding in mm
+      const noteBoxHeight = (noteLines.length * lineHeight) + (boxPadding * 2);
+      
+      // Position the note box at the bottom of the image
+      // It starts slightly above the bottom to fit itself
+      const boxY = pdfHeight - noteBoxHeight - 5; // 5mm margin from the bottom
+      const boxX = (pdfWidth - textWidth) / 2; // Center the box
+      
+      // Draw a semi-transparent white background for the note
+      doc.setFillColor(255, 255, 255, 0.9);
+      doc.rect(boxX - boxPadding, boxY - boxPadding, textWidth + (boxPadding * 2), noteBoxHeight, 'F');
+      
+      // Add the text on top of the background
+      doc.text(noteLines, boxX, boxY);
     }
     
     // Generate PDF as blob
