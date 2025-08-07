@@ -97,60 +97,54 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // ADD THIS ENTIRE NEW FUNCTION to background-firefox.js
 async function getLinkData(tabId) {
-  console.log('Background: Actively fetching link data from tab...');
+  console.log('Background: Actively fetching NORMALIZED link data from tab...');
   const results = await browser.scripting.executeScript({
     target: { tabId: tabId },
     func: () => {
       const visibleLinks = [];
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
       document.querySelectorAll('a[href]').forEach(link => {
         const rect = link.getBoundingClientRect();
         const isVisible = rect.top >= 0 && rect.left >= 0 &&
-                         rect.bottom <= window.innerHeight &&
-                         rect.right <= window.innerWidth &&
+                         rect.bottom <= viewportHeight &&
+                         rect.right <= viewportWidth &&
                          rect.width > 0 && rect.height > 0;
         
         if (isVisible) {
           visibleLinks.push({
             href: link.href,
-            x: rect.x,
-            y: rect.y,
-            width: rect.width,
-            height: rect.height
+            // Calculate position and size as a percentage of the viewport
+            normX: rect.x / viewportWidth,
+            normY: rect.y / viewportHeight,
+            normWidth: rect.width / viewportWidth,
+            normHeight: rect.height / viewportHeight
           });
         }
       });
       return visibleLinks;
     }
   });
-  // The result is an array, so we take the first element's result
   return results[0].result;
 }
 
 // Generate PDF directly in background script with professional layout
 async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filename, logo_base64) {
   try {
-    console.log('Background: Starting PDF generation with custom layout...');
-
     if (typeof jspdf === 'undefined' || !jspdf.jsPDF) {
       throw new Error('jsPDF library not found. Check manifest.json.');
     }
 
     const PAGE_MARGIN = 10;
     const A4_WIDTH = 297;
-    const A4_HEIGHT = 210;
     const CONTENT_WIDTH = A4_WIDTH - (PAGE_MARGIN * 2);
 
-    const doc = new jspdf.jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: 'a4'
-    });
-    
-    // Header, etc. ... (No changes here)
+    const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+    // Draw Header
     const header_y_start = PAGE_MARGIN;
-    if (logo_base64) {
-      doc.addImage(logo_base64, 'PNG', PAGE_MARGIN, header_y_start, 40, 15);
-    }
+    if (logo_base64) doc.addImage(logo_base64, 'PNG', PAGE_MARGIN, header_y_start, 40, 15);
     doc.setFontSize(9);
     doc.setTextColor(0, 102, 204);
     doc.textWithLink(url, A4_WIDTH - PAGE_MARGIN, header_y_start + 8, { url: url, align: 'right' });
@@ -158,54 +152,30 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
     doc.setDrawColor(200);
     doc.line(PAGE_MARGIN, header_height - 5, A4_WIDTH - PAGE_MARGIN, header_height - 5);
 
-    // Screenshot
+    // Draw Screenshot
     const img = new Image();
     img.src = screenshot;
     await img.decode();
-    const imgAspectRatio = img.height / img.width;
-    const screenshotHeight = CONTENT_WIDTH * imgAspectRatio;
+    const screenshotHeight = CONTENT_WIDTH * (img.height / img.width);
     const screenshot_y_start = header_height;
     doc.addImage(screenshot, 'PNG', PAGE_MARGIN, screenshot_y_start, CONTENT_WIDTH, screenshotHeight);
-    
-    // --- START OF DEBUG LOGGING ---
 
-    // DEBUG: Log the dimensions to check our inputs
-    console.log(`DEBUG: Image dimensions (px): ${img.width}w x ${img.height}h`);
-    console.log(`DEBUG: PDF content area (mm): ${CONTENT_WIDTH}w x ${screenshotHeight}h`);
-
+    // Draw Links using Normalized Coordinates
     if (links && links.length > 0) {
-      const scaleX = CONTENT_WIDTH / img.width;
-      const scaleY = screenshotHeight / img.height;
-
-      // DEBUG: Log the calculated scale factors
-      console.log(`DEBUG: Scale factors: scaleX=${scaleX}, scaleY=${scaleY}`);
-
-      links.forEach((link, index) => {
+      links.forEach(link => {
         if (link.href) {
-          const scaledX = link.x * scaleX + PAGE_MARGIN;
-          const scaledY = link.y * scaleY + screenshot_y_start;
-          const scaledWidth = link.width * scaleX;
-          const scaledHeight = link.height * scaleY;
+          // Apply the percentage to the dimensions of the screenshot IN THE PDF
+          const finalX = link.normX * CONTENT_WIDTH + PAGE_MARGIN;
+          const finalY = link.normY * screenshotHeight + screenshot_y_start;
+          const finalWidth = link.normWidth * CONTENT_WIDTH;
+          const finalHeight = link.normHeight * screenshotHeight;
           
-          // DEBUG: Log the data for the first link
-          if (index === 0) {
-            console.log('--- DEBUG: First Link Data ---');
-            console.log('Original (px):', { x: link.x, y: link.y, w: link.width, h: link.height });
-            console.log('Scaled (mm):', { x: scaledX, y: scaledY, w: scaledWidth, h: scaledHeight });
-            console.log('URL:', link.href);
-            console.log('-----------------------------');
-          }
-          
-          doc.link(scaledX, scaledY, scaledWidth, scaledHeight, { url: link.href });
+          doc.link(finalX, finalY, finalWidth, finalHeight, { url: link.href });
         }
       });
-    } else {
-      console.log("DEBUG: No links array or empty links array was received.");
     }
-    
-    // --- END OF DEBUG LOGGING ---
-    
-    // Note drawing, etc. ... (No changes here)
+
+    // Draw Footer (Note)
     if (note && note.trim()) {
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
@@ -214,7 +184,7 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
       doc.text(noteLines, PAGE_MARGIN, note_y_start);
     }
     
-    // Saving the document...
+    // Save the Document
     const pdfBlob = doc.output('blob');
     const url_obj = URL.createObjectURL(pdfBlob);
     await browser.downloads.download({
