@@ -144,13 +144,13 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
 
     // Draw Header
     const header_y_start = PAGE_MARGIN;
-    if (logo_base64) doc.addImage(logo_base64, 'PNG', PAGE_MARGIN, header_y_start, 40, 15);
+    if (logo_base64) doc.addImage(logo_base64, 'PNG', PAGE_MARGIN, header_y_start, 70, 26.25);
     doc.setFontSize(9);
     doc.setTextColor(0, 102, 204);
     doc.textWithLink(url, A4_WIDTH - PAGE_MARGIN, header_y_start + 8, { url: url, align: 'right' });
-    const header_height = 30;
+    const header_height = 52.5;
     doc.setDrawColor(200);
-    doc.line(PAGE_MARGIN, header_height - 5, A4_WIDTH - PAGE_MARGIN, header_height - 5);
+    doc.line(PAGE_MARGIN, header_height - 10, A4_WIDTH - PAGE_MARGIN, header_height - 10);
 
     // Draw Screenshot
     const img = new Image();
@@ -177,7 +177,7 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
 
     // Draw Footer (Note)
     if (note && note.trim()) {
-      doc.setFontSize(10);
+      doc.setFontSize(5);
       doc.setTextColor(51, 51, 51);
       const note_y_start = screenshot_y_start + screenshotHeight + 10;
       const noteLines = doc.splitTextToSize(`Notes: ${note}`, CONTENT_WIDTH);
