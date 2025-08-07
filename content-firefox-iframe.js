@@ -328,69 +328,32 @@ console.log('THE QUICKNESS - Content script IIFE started');
     }
 
     async savePDF(capturedData, note, customFilename = null) {
-      console.log('savePDF called - Libraries loaded:', this.librariesLoaded, 'PDF iframe:', !!this.pdfIframe);
+      console.log('Content: Starting PDF generation in background script...');
       
-      if (!this.librariesLoaded || !this.pdfIframe) {
-        console.error('PDF iframe not ready - Libraries loaded:', this.librariesLoaded, 'PDF iframe exists:', !!this.pdfIframe);
-        this.showToast('PDF functionality not available - please refresh and try again', 'error');
-        return;
-      }
-      
-      return new Promise((resolve, reject) => {
-        console.log('Starting PDF generation process...');
-        
-        const messageHandler = (event) => {
-          console.log('Content script received iframe message:', event.data.action);
-          
-          if (event.data.action === 'pdfGenerated') {
-            window.removeEventListener('message', messageHandler);
-            console.log('PDF generated successfully, sending to background script...');
-            
-            // Send PDF data to background script for download
-            const sendMessage = async () => {
-              try {
-                const response = await browser.runtime.sendMessage({
-                  action: 'downloadPDF',
-                  pdfData: event.data.pdfData,
-                  filename: event.data.filename
-                });
-                console.log('PDF download response:', response);
-                resolve();
-              } catch (error) {
-                console.error('Failed to initiate PDF download:', error);
-                reject(error);
-              }
-            };
-            
-            sendMessage();
-          } else if (event.data.action === 'pdfError') {
-            window.removeEventListener('message', messageHandler);
-            console.error('PDF generation failed:', event.data.error);
-            reject(new Error(event.data.error));
-          }
-        };
-        
-        window.addEventListener('message', messageHandler);
-        
-        // Send PDF generation request to iframe
+      try {
         const filename = customFilename || this.generateFilename(note);
-        console.log('Sending generatePDF message to iframe with filename:', filename);
         
-        this.pdfIframe.contentWindow.postMessage({
+        // Send PDF generation request directly to background script
+        const response = await browser.runtime.sendMessage({
           action: 'generatePDF',
           screenshot: capturedData.screenshot,
           links: capturedData.links,
-          filename: filename,
           note: note,
-          url: capturedData.url
-        }, '*');
+          url: capturedData.url,
+          filename: filename
+        });
         
-        // Timeout after 30 seconds
-        setTimeout(() => {
-          window.removeEventListener('message', messageHandler);
-          reject(new Error('PDF generation timeout'));
-        }, 30000);
-      });
+        if (response.success) {
+          console.log('PDF generation successful');
+        } else {
+          throw new Error(response.error || 'PDF generation failed');
+        }
+        
+      } catch (error) {
+        console.error('Content: PDF generation failed:', error);
+        this.showToast(`Failed to generate PDF: ${error.message}`, 'error');
+        throw error;
+      }
     }
 
     generateFilename(note) {

@@ -2,71 +2,163 @@
 // THE QUICKNESS - Firefox Background Script
 // Converted from Chrome extension to Firefox using browser.* namespace
 
+// Load jsPDF library
+let jsPDF = null;
+
+// Load jsPDF when extension starts
+async function loadJsPDF() {
+  try {
+    const response = await fetch(browser.runtime.getURL('jspdf.umd.min.js'));
+    const jsText = await response.text();
+    eval(jsText);
+    jsPDF = window.jspdf?.jsPDF;
+    console.log('jsPDF loaded successfully in background script');
+    return true;
+  } catch (error) {
+    console.error('Failed to load jsPDF:', error);
+    return false;
+  }
+}
+
+// Initialize jsPDF on startup
+loadJsPDF();
+
 // Handle extension icon clicks
 browser.action.onClicked.addListener(async (tab) => {
-  console.log('THE QUICKNESS icon clicked, injecting scripts and triggering screenshot');
-  console.log('THE QUICKNESS - Tab info:', tab.id, tab.url);
+  console.log('THE QUICKNESS icon clicked, capturing screenshot');
   
   try {
-    // Inject CSS and scripts dynamically (activeTab permission)
+    // Inject CSS and content script for modal UI
     await browser.scripting.insertCSS({
       target: { tabId: tab.id },
       files: ['content.css']
     });
     
-    // Inject logo data first, then content script (jsPDF will be loaded via blob)
-    console.log('Injecting logo data...');
     await browser.scripting.executeScript({
       target: { tabId: tab.id },
       files: ['logo-data.js']
     });
     
-    console.log('Injecting iframe-based content script...');
     await browser.scripting.executeScript({
       target: { tabId: tab.id },
       files: ['content-firefox-iframe.js']
     });
     
-    // Small delay to ensure content script is ready
-    setTimeout(async () => {
-      try {
-        // Capture the visible tab using Firefox's API
-        const dataUrl = await browser.tabs.captureVisibleTab(null, {
-          format: 'png',
-          quality: 95
-        });
-        
-        // Send the captured screenshot to content script
-        await browser.tabs.sendMessage(tab.id, {
-          action: 'showNoteModal',
-          screenshot: dataUrl,
-          url: tab.url
-        });
-      } catch (error) {
-        console.error('Failed to capture tab or send message:', error);
-      }
-    }, 200);
+    // Capture screenshot directly in background script
+    const dataUrl = await browser.tabs.captureVisibleTab(null, {
+      format: 'png',
+      quality: 95
+    });
+    
+    // Send screenshot to content script for note modal
+    await browser.tabs.sendMessage(tab.id, {
+      action: 'showNoteModal',
+      screenshot: dataUrl,
+      url: tab.url
+    });
     
   } catch (error) {
-    console.error('Error injecting scripts:', error);
+    console.error('Error in extension icon click handler:', error);
   }
 });
 
 // Handle messages from content script
-browser.runtime.onMessage.addListener(async (request, sender) => {
-  try {
-    if (request.action === 'downloadPDF') {
-      await downloadPDFToDownloads(request.pdfData, request.filename, sender.tab.id);
-      return { success: true };
-    } else if (request.action === 'createBookmark') {
-      await createBookmark(request.filename, request.note, request.url, sender.tab.id, sender.tab.title);
-      return { success: true };
-    }
-  } catch (error) {
-    console.error('Error handling message:', error);
-    return { success: false, error: error.message };
+browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Background received message:', request.action);
+  
+  if (request.action === 'generatePDF') {
+    // Generate PDF directly in background script
+    generateAndDownloadPDF(request.screenshot, request.links, request.note, request.url, sender.tab.id, request.filename)
+      .then(() => sendResponse({ success: true }))
+      .catch(error => {
+        console.error('PDF generation failed:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Keep message channel open for async response
+  } else if (request.action === 'createBookmark') {
+    createBookmark(request.filename, request.note, request.url, sender.tab.id, sender.tab.title)
+      .then(() => sendResponse({ success: true }))
+      .catch(error => {
+        console.error('Bookmark creation failed:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Keep message channel open for async response
   }
 });
+
+// Generate PDF directly in background script (proper Firefox approach)
+async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filename) {
+  try {
+    console.log('Background: Starting PDF generation...');
+    
+    if (!jsPDF) {
+      throw new Error('jsPDF not loaded');
+    }
+    
+    // Create PDF document
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'px',
+      format: [1536, 4819] // Match screenshot dimensions
+    });
+    
+    // Add screenshot image
+    doc.addImage(screenshot, 'PNG', 0, 0, 1536, 4819);
+    
+    // Add clickable link areas
+    if (links && links.length > 0) {
+      console.log(`Background: Adding ${links.length} clickable links`);
+      links.forEach(link => {
+        if (link.href && link.x !== undefined && link.y !== undefined) {
+          doc.link(link.x, link.y, link.width, link.height, { url: link.href });
+        }
+      });
+    }
+    
+    // Add note if provided
+    if (note && note.trim()) {
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.setFillColor(255, 255, 255);
+      const noteLines = doc.splitTextToSize(`Note: ${note}`, 1500);
+      const noteHeight = noteLines.length * 15;
+      doc.rect(20, 4760, 1496, noteHeight + 20, 'F');
+      doc.text(noteLines, 30, 4780);
+    }
+    
+    // Generate PDF as blob
+    const pdfBlob = doc.output('blob');
+    
+    // Create download URL and save file
+    const url_obj = URL.createObjectURL(pdfBlob);
+    const downloadId = await browser.downloads.download({
+      url: url_obj,
+      filename: `THE QUICKNESS/${filename}.pdf`,
+      saveAs: false,
+      conflictAction: 'uniquify'
+    });
+    
+    console.log('Background: PDF saved successfully:', downloadId);
+    
+    // Notify content script of success
+    await browser.tabs.sendMessage(tabId, {
+      action: 'downloadSuccess',
+      filename: filename
+    });
+    
+  } catch (error) {
+    console.error('Background: PDF generation failed:', error);
+    
+    // Notify content script of failure
+    await browser.tabs.sendMessage(tabId, {
+      action: 'downloadFailed',
+      filename: filename,
+      error: error.message
+    });
+    
+    throw error;
+  }
+}
 
 // Bookmark creation function (converted to promises)
 async function createBookmark(filename, note, url, tabId, tabTitle) {
@@ -180,41 +272,7 @@ async function notifyContentScriptBookmark(tabId, message, success) {
   }
 }
 
-async function downloadPDFToDownloads(pdfDataArray, filename, tabId) {
-  try {
-    console.log('Background: Starting PDF download to Downloads folder');
-    
-    // Convert array back to Uint8Array
-    const uint8Array = new Uint8Array(pdfDataArray);
-    
-    // Convert to base64 data URL
-    let binary = '';
-    for (let i = 0; i < uint8Array.length; i++) {
-      binary += String.fromCharCode(uint8Array[i]);
-    }
-    const base64 = btoa(binary);
-    const dataUrl = `data:application/pdf;base64,${base64}`;
-    
-    console.log('Background: Saving PDF to THE QUICKNESS folder:', filename);
-    
-    // Save to THE QUICKNESS subfolder in Downloads folder
-    const subfolderPath = `THE QUICKNESS/${filename}`;
-    
-    const downloadId = await browser.downloads.download({
-      url: dataUrl,
-      filename: subfolderPath,
-      saveAs: false,
-      conflictAction: 'uniquify'
-    });
-    
-    console.log('Background: PDF saved successfully to THE QUICKNESS folder:', downloadId);
-    await notifyContentScript(tabId, filename, true);
-    
-  } catch (error) {
-    console.error('Background: Error in download process:', error);
-    await notifyContentScript(tabId, filename, false);
-  }
-}
+// Remove the old downloadPDFToDownloads function - PDF generation now happens directly in background
 
 async function notifyContentScript(tabId, filename, success) {
   try {
