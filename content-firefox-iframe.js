@@ -379,20 +379,19 @@ console.log('THE QUICKNESS - Content script IIFE started');
       try {
         const filename = this.generateFilename(note);
         
-        // Save bookmark first
+        // Send ONE message with ALL data to the background script
         await browser.runtime.sendMessage({
-          action: 'createBookmark',
+          action: 'saveBookmarkAndPDF', // New combined action
           filename: filename,
           note: note,
-          url: capturedData.url
+          url: capturedData.url,
+          screenshot: capturedData.screenshot,
+          links: capturedData.links
         });
-        
-        // Then save PDF
-        await this.savePDF(capturedData, note, filename);
-        
+
       } catch (error) {
-        console.error('Error saving bookmark and PDF:', error);
-        this.showToast('Failed to save bookmark and PDF', 'error');
+        console.error('Error in saveBoth:', error);
+        this.showToast(`Failed to save: ${error.message}`, 'error');
       }
     }
 

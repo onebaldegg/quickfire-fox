@@ -75,8 +75,29 @@ browser.action.onClicked.addListener(async (tab) => {
 // Handle messages from content script
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('Background received message:', request.action);
-  
-  if (request.action === 'generatePDF') {
+
+  // Handle the new combined action
+  if (request.action === 'saveBookmarkAndPDF') {
+    (async () => {
+      try {
+        // Get tab title for the bookmark
+        const tab = await browser.tabs.get(sender.tab.id);
+        const tabTitle = tab.title;
+
+        // 1. Create the bookmark
+        await createBookmark(request.filename, request.note, request.url, sender.tab.id, tabTitle);
+
+        // 2. Generate and download the PDF
+        await generateAndDownloadPDF(request.screenshot, request.links, request.note, request.url, sender.tab.id, request.filename);
+
+        sendResponse({ success: true });
+      } catch (error) {
+        console.error('Failed during saveBookmarkAndPDF:', error);
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
+    return true; // Keep message channel open for async response
+  } else if (request.action === 'generatePDF') {
     // Handle PDF generation with proper async response
     (async () => {
       try {
@@ -113,11 +134,26 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
       throw new Error('jsPDF not loaded - try reloading the extension');
     }
     
-    // Create PDF document following Firefox guide
-    const doc = new jsPDF();
+    // Create an image to get proper dimensions
+    const img = new Image();
+    img.src = screenshot;
+    await img.decode(); // Wait for the image to be fully loaded
+
+    const imgWidth = img.width;
+    const imgHeight = img.height;
+
+    // A4 page size is 210mm wide x 297mm high
+    const pdfWidth = 210;
+    const pdfHeight = (imgHeight * pdfWidth) / imgWidth; // Calculate height to keep aspect ratio
+
+    const doc = new jsPDF({
+      orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait',
+      unit: 'mm',
+      format: [pdfWidth, pdfHeight]
+    });
     
-    // Add screenshot image
-    doc.addImage(screenshot, 'PNG', 0, 0, 1536, 4819);
+    // Add screenshot image with proper aspect ratio
+    doc.addImage(screenshot, 'PNG', 0, 0, pdfWidth, pdfHeight);
     
     // Add clickable link areas
     if (links && links.length > 0) {
