@@ -2,8 +2,32 @@
 // THE QUICKNESS - Firefox Background Script
 // Converted from Chrome extension to Firefox using browser.* namespace
 
-// Import jsPDF library
-importScripts('jspdf.umd.min.js');
+// Load jsPDF library
+let jsPDF = null;
+
+// Load jsPDF when extension starts
+async function loadJsPDF() {
+  try {
+    const response = await fetch(browser.runtime.getURL('jspdf.umd.min.js'));
+    const jsText = await response.text();
+    
+    // Create a script element to properly load jsPDF
+    const script = document.createElement('script');
+    script.textContent = jsText;
+    document.head.appendChild(script);
+    
+    // Access jsPDF from the global scope
+    jsPDF = window.jspdf?.jsPDF;
+    console.log('jsPDF loaded successfully:', !!jsPDF);
+    return !!jsPDF;
+  } catch (error) {
+    console.error('Failed to load jsPDF:', error);
+    return false;
+  }
+}
+
+// Initialize jsPDF on startup
+loadJsPDF();
 
 // Handle extension icon clicks
 browser.action.onClicked.addListener(async (tab) => {
@@ -80,10 +104,9 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
   try {
     console.log('Background: Starting PDF generation...');
     
-    // Access jsPDF from global scope (loaded via importScripts)
-    const { jsPDF } = window.jspdf || {};
+    // Check if jsPDF is loaded
     if (!jsPDF) {
-      throw new Error('jsPDF not available');
+      throw new Error('jsPDF not loaded - try reloading the extension');
     }
     
     // Create PDF document following Firefox guide
