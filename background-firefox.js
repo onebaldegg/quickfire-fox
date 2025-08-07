@@ -2,36 +2,6 @@
 // THE QUICKNESS - Firefox Background Script
 // Converted from Chrome extension to Firefox using browser.* namespace
 
-// Load jsPDF library using dynamic import approach for Firefox
-let jsPDF = null;
-
-// Load jsPDF when extension starts
-async function loadJsPDF() {
-  try {
-    // Use dynamic script loading that works with Firefox CSP
-    const script = document.createElement('script');
-    script.src = browser.runtime.getURL('jspdf.umd.min.js');
-    script.onload = () => {
-      // Access jsPDF from the global scope after script loads
-      jsPDF = window.jspdf?.jsPDF;
-      console.log('jsPDF loaded successfully:', !!jsPDF);
-    };
-    script.onerror = (error) => {
-      console.error('Failed to load jsPDF script:', error);
-    };
-    document.head.appendChild(script);
-    
-    // Wait a bit for the script to load
-    await new Promise(resolve => setTimeout(resolve, 100));
-    return !!jsPDF;
-  } catch (error) {
-    console.error('Failed to load jsPDF:', error);
-    return false;
-  }
-}
-
-// Initialize jsPDF on startup
-loadJsPDF();
 
 // Handle extension icon clicks
 browser.action.onClicked.addListener(async (tab) => {
@@ -129,8 +99,9 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
   try {
     console.log('Background: Starting PDF generation with custom layout...');
 
-    if (!jsPDF) {
-      throw new Error('jsPDF not loaded - try reloading the extension');
+    // FIXED: Check if the library is loaded correctly
+    if (typeof jspdf === 'undefined' || !jspdf.jsPDF) {
+      throw new Error('jsPDF library not found. Check manifest.json.');
     }
 
     // --- 1. SETUP DOCUMENT AND CONSTANTS ---
@@ -139,7 +110,8 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
     const A4_HEIGHT = 210; // Landscape: shorter side is height
     const CONTENT_WIDTH = A4_WIDTH - (PAGE_MARGIN * 2);
 
-    const doc = new jsPDF({
+    // FIXED: Instantiate jsPDF from the global object
+    const doc = new jspdf.jsPDF({
       orientation: 'landscape',
       unit: 'mm',
       format: 'a4'
@@ -202,7 +174,7 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
       conflictAction: 'uniquify'
     });
 
-    console.log('Background: PDF with custom layout saved successfully:', downloadId);
+    console.log('Background: PDF with custom layout and links saved successfully.');
     
     // Notify content script of success
     await browser.tabs.sendMessage(tabId, {

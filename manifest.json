@@ -18,7 +18,10 @@
     "bookmarks"
   ],
   "background": {
-    "scripts": ["background-firefox.js"]
+    "scripts": [
+      "jspdf.umd.min.js",
+      "background-firefox.js"
+    ]
   },
   "action": {
     "default_title": "THE QUICKNESS - Click to capture screenshot and create PDF"
