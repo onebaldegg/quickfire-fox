@@ -155,12 +155,22 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
     // Add screenshot image with proper aspect ratio
     doc.addImage(screenshot, 'PNG', 0, 0, pdfWidth, pdfHeight);
     
-    // Add clickable link areas
+    // Add clickable link areas (scale coordinates to match PDF dimensions)
     if (links && links.length > 0) {
       console.log(`Background: Adding ${links.length} clickable links`);
+      const scaleX = pdfWidth / imgWidth;
+      const scaleY = pdfHeight / imgHeight;
+      
       links.forEach(link => {
         if (link.href && link.x !== undefined && link.y !== undefined) {
-          doc.link(link.x, link.y, link.width, link.height, { url: link.href });
+          // Scale coordinates from viewport to PDF dimensions
+          const scaledX = link.x * scaleX;
+          const scaledY = link.y * scaleY;
+          const scaledWidth = link.width * scaleX;
+          const scaledHeight = link.height * scaleY;
+          
+          doc.link(scaledX, scaledY, scaledWidth, scaledHeight, { url: link.href });
+          console.log(`Background: Added link at (${scaledX}, ${scaledY}) to ${link.href}`);
         }
       });
     }
