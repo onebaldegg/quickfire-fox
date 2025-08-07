@@ -67,21 +67,28 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('Background received message:', request.action);
   
   if (request.action === 'generatePDF') {
-    // Generate PDF directly in background script
-    generateAndDownloadPDF(request.screenshot, request.links, request.note, request.url, sender.tab.id, request.filename)
-      .then(() => sendResponse({ success: true }))
-      .catch(error => {
+    // Handle PDF generation with proper async response
+    (async () => {
+      try {
+        await generateAndDownloadPDF(request.screenshot, request.links, request.note, request.url, sender.tab.id, request.filename);
+        sendResponse({ success: true });
+      } catch (error) {
         console.error('PDF generation failed:', error);
         sendResponse({ success: false, error: error.message });
-      });
+      }
+    })();
     return true; // Keep message channel open for async response
   } else if (request.action === 'createBookmark') {
-    createBookmark(request.filename, request.note, request.url, sender.tab.id, sender.tab.title)
-      .then(() => sendResponse({ success: true }))
-      .catch(error => {
+    // Handle bookmark creation with proper async response
+    (async () => {
+      try {
+        await createBookmark(request.filename, request.note, request.url, sender.tab.id, sender.tab.title);
+        sendResponse({ success: true });
+      } catch (error) {
         console.error('Bookmark creation failed:', error);
         sendResponse({ success: false, error: error.message });
-      });
+      }
+    })();
     return true; // Keep message channel open for async response
   }
 });
