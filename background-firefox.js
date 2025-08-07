@@ -302,11 +302,10 @@ async function createBookmark(filename, note, url, tabId, tabTitle) {
     });
     
     console.log('Background: Bookmark created successfully:', newBookmark);
-    await notifyContentScriptBookmark(tabId, `Bookmark saved: ${bookmarkTitle}`, true);
     
   } catch (error) {
     console.error('Background: Failed to create bookmark:', error);
-    await notifyContentScriptBookmark(tabId, `Failed to create bookmark: ${error.message}`, false);
+    throw error;
   }
 }
 

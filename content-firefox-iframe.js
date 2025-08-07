@@ -23,67 +23,11 @@ console.log('THE QUICKNESS - Content script IIFE started');
     }
 
     async init() {
-      // Wait for PDF iframe to be ready (proven CSP bypass technique)
-      await this.waitForLibraries();
+      // Directly set up the listener. No need to wait for an iframe.
       this.setupMessageListener();
     }
 
-    // Create iframe to load jsPDF (proven technique to bypass CSP)
-    createPDFIframe() {
-      return new Promise((resolve, reject) => {
-        console.log('Creating PDF iframe...');
-        const iframe = document.createElement('iframe');
-        iframe.style.cssText = 'display: none; width: 0; height: 0; border: none;';
-        
-        const iframeUrl = browser.runtime.getURL('pdf-iframe.html');
-        console.log('PDF iframe URL:', iframeUrl);
-        iframe.src = iframeUrl;
-        
-        const messageHandler = (event) => {
-          console.log('Received message from iframe:', event.data);
-          if (event.data.action === 'iframeReady') {
-            console.log('PDF iframe ready!');
-            window.removeEventListener('message', messageHandler);
-            resolve(iframe);
-          }
-        };
-        
-        window.addEventListener('message', messageHandler);
-        
-        iframe.onload = () => {
-          console.log('PDF iframe loaded successfully');
-        };
-        
-        iframe.onerror = (error) => {
-          console.error('PDF iframe load error:', error);
-          window.removeEventListener('message', messageHandler);
-          reject(new Error('Failed to load PDF iframe'));
-        };
-        
-        console.log('Appending PDF iframe to document body');
-        document.body.appendChild(iframe);
-        
-        // Timeout after 10 seconds
-        setTimeout(() => {
-          console.error('PDF iframe load timeout after 10 seconds');
-          window.removeEventListener('message', messageHandler);
-          reject(new Error('PDF iframe load timeout'));
-        }, 10000);
-      });
-    }
 
-    async waitForLibraries() {
-      console.log('Firefox: Setting up PDF iframe (proven CSP bypass technique)...');
-      
-      try {
-        this.pdfIframe = await this.createPDFIframe();
-        console.log('✅ PDF iframe created successfully');
-        this.librariesLoaded = true;
-      } catch (error) {
-        console.error('❌ Failed to create PDF iframe:', error);
-        alert('PDF functionality failed to load. Please refresh the page and try again.');
-      }
-    }
 
     setupMessageListener() {
       if (typeof browser !== 'undefined' && browser.runtime) {
