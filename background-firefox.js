@@ -50,15 +50,16 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'saveBookmarkAndPDF') {
     (async () => {
       try {
-        // Get tab title for the bookmark
         const tab = await browser.tabs.get(sender.tab.id);
-        const tabTitle = tab.title;
 
-        // 1. Create the bookmark
-        await createBookmark(request.filename, request.note, request.url, sender.tab.id, tabTitle);
+        // 1. Fetch fresh link data directly from the tab
+        const links = await getLinkData(sender.tab.id);
 
-        // 2. Generate and download the PDF
-        await generateAndDownloadPDF(request.screenshot, request.links, request.note, request.url, sender.tab.id, request.filename, request.logo_base64);
+        // 2. Create the bookmark
+        await createBookmark(request.filename, request.note, request.url, sender.tab.id, tab.title);
+
+        // 3. Generate and download the PDF using the fresh link data
+        await generateAndDownloadPDF(request.screenshot, links, request.note, request.url, sender.tab.id, request.filename, request.logo_base64);
 
         sendResponse({ success: true });
       } catch (error) {
@@ -93,6 +94,37 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Keep message channel open for async response
   }
 });
+
+// ADD THIS ENTIRE NEW FUNCTION to background-firefox.js
+async function getLinkData(tabId) {
+  console.log('Background: Actively fetching link data from tab...');
+  const results = await browser.scripting.executeScript({
+    target: { tabId: tabId },
+    func: () => {
+      const visibleLinks = [];
+      document.querySelectorAll('a[href]').forEach(link => {
+        const rect = link.getBoundingClientRect();
+        const isVisible = rect.top >= 0 && rect.left >= 0 &&
+                         rect.bottom <= window.innerHeight &&
+                         rect.right <= window.innerWidth &&
+                         rect.width > 0 && rect.height > 0;
+        
+        if (isVisible) {
+          visibleLinks.push({
+            href: link.href,
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height
+          });
+        }
+      });
+      return visibleLinks;
+    }
+  });
+  // The result is an array, so we take the first element's result
+  return results[0].result;
+}
 
 // Generate PDF directly in background script with professional layout
 async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filename, logo_base64) {

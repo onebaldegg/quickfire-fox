@@ -62,41 +62,13 @@ console.log('THE QUICKNESS - Content script IIFE started');
     }
 
     async showNoteModal(screenshot, url) {
-      // Get all visible links for PDF
-      const links = this.extractLinksFromViewport();
-      console.log(`Extracted ${links.length} links from viewport for PDF overlay`);
-      
       console.log('THE QUICKNESS - showNoteModal called');
-      const capturedData = { screenshot, url, links };
-      console.log('THE QUICKNESS - capturedData:', capturedData);
+      // We no longer get links here. The background script will handle it.
+      const capturedData = { screenshot, url };
       
       this.createModal(capturedData);
     }
 
-    extractLinksFromViewport() {
-      const links = [];
-      const allLinks = document.querySelectorAll('a[href]');
-      
-      allLinks.forEach(link => {
-        const rect = link.getBoundingClientRect();
-        const isVisible = rect.top >= 0 && rect.left >= 0 && 
-                         rect.bottom <= window.innerHeight && 
-                         rect.right <= window.innerWidth;
-        
-        if (isVisible && link.href && link.textContent.trim()) {
-          links.push({
-            text: link.textContent.trim().substring(0, 100),
-            url: link.href,
-            x: Math.round(rect.left),
-            y: Math.round(rect.top),
-            width: Math.round(rect.width),
-            height: Math.round(rect.height)
-          });
-        }
-      });
-      
-      return links;
-    }
 
     createModal(capturedData) {
       // Create backdrop
