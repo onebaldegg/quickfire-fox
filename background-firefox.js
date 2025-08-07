@@ -148,7 +148,7 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
     doc.setFontSize(9);
     doc.setTextColor(0, 102, 204);
     doc.textWithLink(url, A4_WIDTH - PAGE_MARGIN, header_y_start + 8, { url: url, align: 'right' });
-    const header_height = 52.5;
+    const header_height = 40;
     doc.setDrawColor(200);
     doc.line(PAGE_MARGIN, header_height - 10, A4_WIDTH - PAGE_MARGIN, header_height - 10);
 
