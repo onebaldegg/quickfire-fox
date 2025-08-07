@@ -135,12 +135,12 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
 
     // --- 1. SETUP DOCUMENT AND CONSTANTS ---
     const PAGE_MARGIN = 10;
-    const A4_WIDTH = 210;
-    const A4_HEIGHT = 297;
+    const A4_WIDTH = 297; // Landscape: longer side is width
+    const A4_HEIGHT = 210; // Landscape: shorter side is height
     const CONTENT_WIDTH = A4_WIDTH - (PAGE_MARGIN * 2);
 
     const doc = new jsPDF({
-      orientation: 'portrait',
+      orientation: 'landscape',
       unit: 'mm',
       format: 'a4'
     });
