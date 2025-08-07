@@ -24,16 +24,16 @@
     "default_title": "THE QUICKNESS - Click to capture screenshot and create PDF"
   },
   "icons": {
-    "16": "icon16.png",
-    "32": "icon32.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
+    "16": "Extension Icon.png",
+    "32": "Extension Icon.png",
+    "48": "Extension Icon.png",
+    "128": "Extension Icon.png"
   },
   "web_accessible_resources": [
     {
       "resources": [
         "jspdf.umd.min.js",
-        "logo-data.js",
+        "logo-data.js", 
         "pdf-iframe.html"
       ],
       "matches": ["<all_urls>"]
