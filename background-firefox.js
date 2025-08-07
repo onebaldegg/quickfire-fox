@@ -99,37 +99,34 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
   try {
     console.log('Background: Starting PDF generation with custom layout...');
 
-    // FIXED: Check if the library is loaded correctly
     if (typeof jspdf === 'undefined' || !jspdf.jsPDF) {
       throw new Error('jsPDF library not found. Check manifest.json.');
     }
 
-    // --- 1. SETUP DOCUMENT AND CONSTANTS ---
     const PAGE_MARGIN = 10;
-    const A4_WIDTH = 297; // Landscape: longer side is width
-    const A4_HEIGHT = 210; // Landscape: shorter side is height
+    const A4_WIDTH = 297;
+    const A4_HEIGHT = 210;
     const CONTENT_WIDTH = A4_WIDTH - (PAGE_MARGIN * 2);
 
-    // FIXED: Instantiate jsPDF from the global object
     const doc = new jspdf.jsPDF({
       orientation: 'landscape',
       unit: 'mm',
       format: 'a4'
     });
-
-    // --- 2. DRAW HEADER (LOGO, URL, and DIVIDER) ---
+    
+    // Header, etc. ... (No changes here)
     const header_y_start = PAGE_MARGIN;
     if (logo_base64) {
-      doc.addImage(logo_base64, 'PNG', PAGE_MARGIN, header_y_start, 40, 15); // Adjust logo size as needed
+      doc.addImage(logo_base64, 'PNG', PAGE_MARGIN, header_y_start, 40, 15);
     }
     doc.setFontSize(9);
-    doc.setTextColor(0, 102, 204); // Blue link color
-    doc.textWithLink(url, CONTENT_WIDTH, header_y_start + 8, { url: url, align: 'right' });
+    doc.setTextColor(0, 102, 204);
+    doc.textWithLink(url, CONTENT_WIDTH + PAGE_MARGIN, header_y_start + 8, { url: url, align: 'right' });
     const header_height = 30;
-    doc.setDrawColor(200); // Light grey for the divider line
+    doc.setDrawColor(200);
     doc.line(PAGE_MARGIN, header_height - 5, A4_WIDTH - PAGE_MARGIN, header_height - 5);
 
-    // --- 3. DRAW SCREENSHOT (SCALED TO FIT) ---
+    // Screenshot
     const img = new Image();
     img.src = screenshot;
     await img.decode();
@@ -137,61 +134,66 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
     const screenshotHeight = CONTENT_WIDTH * imgAspectRatio;
     const screenshot_y_start = header_height;
     doc.addImage(screenshot, 'PNG', PAGE_MARGIN, screenshot_y_start, CONTENT_WIDTH, screenshotHeight);
+    
+    // --- START OF DEBUG LOGGING ---
 
-    // --- 4. DRAW LINKS (SCALED OVER THE SCREENSHOT) ---
+    // DEBUG: Log the dimensions to check our inputs
+    console.log(`DEBUG: Image dimensions (px): ${img.width}w x ${img.height}h`);
+    console.log(`DEBUG: PDF content area (mm): ${CONTENT_WIDTH}w x ${screenshotHeight}h`);
+
     if (links && links.length > 0) {
-      console.log(`Background: Adding ${links.length} clickable links`);
       const scaleX = CONTENT_WIDTH / img.width;
       const scaleY = screenshotHeight / img.height;
-      links.forEach(link => {
+
+      // DEBUG: Log the calculated scale factors
+      console.log(`DEBUG: Scale factors: scaleX=${scaleX}, scaleY=${scaleY}`);
+
+      links.forEach((link, index) => {
         if (link.href) {
           const scaledX = link.x * scaleX + PAGE_MARGIN;
           const scaledY = link.y * scaleY + screenshot_y_start;
           const scaledWidth = link.width * scaleX;
           const scaledHeight = link.height * scaleY;
+          
+          // DEBUG: Log the data for the first link
+          if (index === 0) {
+            console.log('--- DEBUG: First Link Data ---');
+            console.log('Original (px):', { x: link.x, y: link.y, w: link.width, h: link.height });
+            console.log('Scaled (mm):', { x: scaledX, y: scaledY, w: scaledWidth, h: scaledHeight });
+            console.log('URL:', link.href);
+            console.log('-----------------------------');
+          }
+          
           doc.link(scaledX, scaledY, scaledWidth, scaledHeight, { url: link.href });
-          console.log(`Background: Added link at (${scaledX}, ${scaledY}) to ${link.href}`);
         }
       });
+    } else {
+      console.log("DEBUG: No links array or empty links array was received.");
     }
-
-    // --- 5. DRAW FOOTER (NOTE) ---
+    
+    // --- END OF DEBUG LOGGING ---
+    
+    // Note drawing, etc. ... (No changes here)
     if (note && note.trim()) {
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
-      const note_y_start = screenshot_y_start + screenshotHeight + 10; // 10mm below screenshot
+      const note_y_start = screenshot_y_start + screenshotHeight + 10;
       const noteLines = doc.splitTextToSize(`Notes: ${note}`, CONTENT_WIDTH);
       doc.text(noteLines, PAGE_MARGIN, note_y_start);
     }
-
-    // --- 6. SAVE THE DOCUMENT ---
+    
+    // Saving the document...
     const pdfBlob = doc.output('blob');
     const url_obj = URL.createObjectURL(pdfBlob);
-    const downloadId = await browser.downloads.download({
+    await browser.downloads.download({
       url: url_obj,
       filename: `THE QUICKNESS/${filename}.pdf`,
       saveAs: false,
       conflictAction: 'uniquify'
     });
 
-    console.log('Background: PDF with custom layout and links saved successfully.');
-    
-    // Notify content script of success
-    await browser.tabs.sendMessage(tabId, {
-      action: 'downloadSuccess',
-      filename: filename
-    });
-    
   } catch (error) {
     console.error('Background: PDF generation failed:', error);
-    
-    // Notify content script of failure
-    await browser.tabs.sendMessage(tabId, {
-      action: 'downloadFailed',
-      filename: filename,
-      error: error.message
-    });
-    
     throw error;
   }
 }
