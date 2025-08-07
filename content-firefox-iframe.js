@@ -330,7 +330,8 @@ console.log('THE QUICKNESS - Content script IIFE started');
           note: note,
           url: capturedData.url,
           screenshot: capturedData.screenshot,
-          links: capturedData.links
+          links: capturedData.links,
+          logo_base64: window.LOGO_BASE64 // ADD LOGO DATA
         });
 
       } catch (error) {

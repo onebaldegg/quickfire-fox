@@ -88,7 +88,7 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
         await createBookmark(request.filename, request.note, request.url, sender.tab.id, tabTitle);
 
         // 2. Generate and download the PDF
-        await generateAndDownloadPDF(request.screenshot, request.links, request.note, request.url, sender.tab.id, request.filename);
+        await generateAndDownloadPDF(request.screenshot, request.links, request.note, request.url, sender.tab.id, request.filename, request.logo_base64);
 
         sendResponse({ success: true });
       } catch (error) {
@@ -101,7 +101,7 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Handle PDF generation with proper async response
     (async () => {
       try {
-        await generateAndDownloadPDF(request.screenshot, request.links, request.note, request.url, sender.tab.id, request.filename);
+        await generateAndDownloadPDF(request.screenshot, request.links, request.note, request.url, sender.tab.id, request.filename, request.logo_base64);
         sendResponse({ success: true });
       } catch (error) {
         console.error('PDF generation failed:', error);
@@ -124,89 +124,76 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// Generate PDF directly in background script (proper Firefox approach)
-async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filename) {
+// Generate PDF directly in background script with professional layout
+async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filename, logo_base64) {
   try {
-    console.log('Background: Starting PDF generation...');
-    
-    // Check if jsPDF is loaded
+    console.log('Background: Starting PDF generation with custom layout...');
+
     if (!jsPDF) {
       throw new Error('jsPDF not loaded - try reloading the extension');
     }
-    
-    // Create an image to get proper dimensions
-    const img = new Image();
-    img.src = screenshot;
-    await img.decode(); // Wait for the image to be fully loaded
 
-    const imgWidth = img.width;
-    const imgHeight = img.height;
-
-    // A4 page size is 210mm wide x 297mm high
-    const pdfWidth = 210;
-    const pdfHeight = (imgHeight * pdfWidth) / imgWidth; // Calculate height to keep aspect ratio
+    // --- 1. SETUP DOCUMENT AND CONSTANTS ---
+    const PAGE_MARGIN = 10;
+    const A4_WIDTH = 210;
+    const A4_HEIGHT = 297;
+    const CONTENT_WIDTH = A4_WIDTH - (PAGE_MARGIN * 2);
 
     const doc = new jsPDF({
-      orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait',
+      orientation: 'portrait',
       unit: 'mm',
-      format: [pdfWidth, pdfHeight]
+      format: 'a4'
     });
-    
-    // Add screenshot image with proper aspect ratio
-    doc.addImage(screenshot, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    
-    // Add clickable link areas (scale coordinates to match PDF dimensions)
+
+    // --- 2. DRAW HEADER (LOGO, URL, and DIVIDER) ---
+    const header_y_start = PAGE_MARGIN;
+    if (logo_base64) {
+      doc.addImage(logo_base64, 'PNG', PAGE_MARGIN, header_y_start, 40, 15); // Adjust logo size as needed
+    }
+    doc.setFontSize(9);
+    doc.setTextColor(0, 102, 204); // Blue link color
+    doc.textWithLink(url, CONTENT_WIDTH, header_y_start + 8, { url: url, align: 'right' });
+    const header_height = 30;
+    doc.setDrawColor(200); // Light grey for the divider line
+    doc.line(PAGE_MARGIN, header_height - 5, A4_WIDTH - PAGE_MARGIN, header_height - 5);
+
+    // --- 3. DRAW SCREENSHOT (SCALED TO FIT) ---
+    const img = new Image();
+    img.src = screenshot;
+    await img.decode();
+    const imgAspectRatio = img.height / img.width;
+    const screenshotHeight = CONTENT_WIDTH * imgAspectRatio;
+    const screenshot_y_start = header_height;
+    doc.addImage(screenshot, 'PNG', PAGE_MARGIN, screenshot_y_start, CONTENT_WIDTH, screenshotHeight);
+
+    // --- 4. DRAW LINKS (SCALED OVER THE SCREENSHOT) ---
     if (links && links.length > 0) {
       console.log(`Background: Adding ${links.length} clickable links`);
-      const scaleX = pdfWidth / imgWidth;
-      const scaleY = pdfHeight / imgHeight;
-      
+      const scaleX = CONTENT_WIDTH / img.width;
+      const scaleY = screenshotHeight / img.height;
       links.forEach(link => {
-        if (link.href && link.x !== undefined && link.y !== undefined) {
-          // Scale coordinates from viewport to PDF dimensions
-          const scaledX = link.x * scaleX;
-          const scaledY = link.y * scaleY;
+        if (link.href) {
+          const scaledX = link.x * scaleX + PAGE_MARGIN;
+          const scaledY = link.y * scaleY + screenshot_y_start;
           const scaledWidth = link.width * scaleX;
           const scaledHeight = link.height * scaleY;
-          
           doc.link(scaledX, scaledY, scaledWidth, scaledHeight, { url: link.href });
           console.log(`Background: Added link at (${scaledX}, ${scaledY}) to ${link.href}`);
         }
       });
     }
-    
-    // Add note if provided
+
+    // --- 5. DRAW FOOTER (NOTE) ---
     if (note && note.trim()) {
-      const noteText = `Note: ${note}`;
-      doc.setFontSize(9); // A slightly smaller font size works better
-      doc.setTextColor(51, 51, 51); // A softer black text color (#333)
-      
-      // Calculate the width of the text area (90% of the PDF width)
-      const textWidth = pdfWidth * 0.9;
-      const noteLines = doc.splitTextToSize(noteText, textWidth);
-      
-      // Calculate the height of the note box
-      const lineHeight = 5; // Line height in mm for font size 9
-      const boxPadding = 4; // Padding in mm
-      const noteBoxHeight = (noteLines.length * lineHeight) + (boxPadding * 2);
-      
-      // Position the note box at the bottom of the image
-      // It starts slightly above the bottom to fit itself
-      const boxY = pdfHeight - noteBoxHeight - 5; // 5mm margin from the bottom
-      const boxX = (pdfWidth - textWidth) / 2; // Center the box
-      
-      // Draw a semi-transparent white background for the note
-      doc.setFillColor(255, 255, 255, 0.9);
-      doc.rect(boxX - boxPadding, boxY - boxPadding, textWidth + (boxPadding * 2), noteBoxHeight, 'F');
-      
-      // Add the text on top of the background
-      doc.text(noteLines, boxX, boxY);
+      doc.setFontSize(10);
+      doc.setTextColor(51, 51, 51);
+      const note_y_start = screenshot_y_start + screenshotHeight + 10; // 10mm below screenshot
+      const noteLines = doc.splitTextToSize(`Notes: ${note}`, CONTENT_WIDTH);
+      doc.text(noteLines, PAGE_MARGIN, note_y_start);
     }
-    
-    // Generate PDF as blob
+
+    // --- 6. SAVE THE DOCUMENT ---
     const pdfBlob = doc.output('blob');
-    
-    // Create download URL and save file
     const url_obj = URL.createObjectURL(pdfBlob);
     const downloadId = await browser.downloads.download({
       url: url_obj,
@@ -214,8 +201,8 @@ async function generateAndDownloadPDF(screenshot, links, note, url, tabId, filen
       saveAs: false,
       conflictAction: 'uniquify'
     });
-    
-    console.log('Background: PDF saved successfully:', downloadId);
+
+    console.log('Background: PDF with custom layout saved successfully:', downloadId);
     
     // Notify content script of success
     await browser.tabs.sendMessage(tabId, {
