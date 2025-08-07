@@ -347,17 +347,22 @@ console.log('THE QUICKNESS - Content script IIFE started');
             console.log('PDF generated successfully, sending to background script...');
             
             // Send PDF data to background script for download
-            browser.runtime.sendMessage({
-              action: 'downloadPDF',
-              pdfData: event.data.pdfData,
-              filename: event.data.filename
-            }).then(() => {
-              console.log('PDF download initiated successfully');
-              resolve();
-            }).catch(error => {
-              console.error('Failed to initiate PDF download:', error);
-              reject(error);
-            });
+            const sendMessage = async () => {
+              try {
+                const response = await browser.runtime.sendMessage({
+                  action: 'downloadPDF',
+                  pdfData: event.data.pdfData,
+                  filename: event.data.filename
+                });
+                console.log('PDF download response:', response);
+                resolve();
+              } catch (error) {
+                console.error('Failed to initiate PDF download:', error);
+                reject(error);
+              }
+            };
+            
+            sendMessage();
           } else if (event.data.action === 'pdfError') {
             window.removeEventListener('message', messageHandler);
             console.error('PDF generation failed:', event.data.error);
